@@ -1,0 +1,971 @@
+   1               		.file	"rfm22.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  86               	.global	get_packet
+  88               	get_packet:
+   1:rfm22.c       **** #include "rfm22.h"
+   2:rfm22.c       **** #include "powerlog.h"
+   3:rfm22.c       **** 
+   4:rfm22.c       **** 
+   5:rfm22.c       **** 
+   6:rfm22.c       **** void init_RFM22(void)
+   7:rfm22.c       **** {
+   8:rfm22.c       **** 	write_RFM(INTEN2, 0x00);	// Disable all interrupts
+   9:rfm22.c       **** 	write_RFM(OMFC1, 0x01);		// Set READY mode
+  10:rfm22.c       **** 	write_RFM(0x09, 0x7F);		// Cap = 12.5pF
+  11:rfm22.c       **** 	//write_RFM(0x0A, 0x05);		// Clk output is 2 MHz
+  12:rfm22.c       **** 	//write_RFM(0x0A, 0x06);		// Clk output is 1 MHz (default)		
+  13:rfm22.c       **** 	
+  14:rfm22.c       **** 	write_RFM(0x0B, 0xF4);		// GPIO0 is for RX data output
+  15:rfm22.c       **** 	write_RFM(0x0C, 0xEF);		// GPIO1 is TX/RX data CLK output
+  16:rfm22.c       **** 	write_RFM(0x0D, 0x00);		// GPIO2 for MCLK output
+  17:rfm22.c       **** 	write_RFM(0x0E, 0x00);		// GPIO port use default value
+  18:rfm22.c       **** 	
+  19:rfm22.c       **** 	write_RFM(0x0F, 0x70);		// NO ADC used
+  20:rfm22.c       **** 	write_RFM(0x10, 0x00);		// no ADC used
+  21:rfm22.c       **** 	write_RFM(0x12, 0x00);		// No temp sensor used
+  22:rfm22.c       **** 	write_RFM(0x13, 0x00);		// no temp sensor used
+  23:rfm22.c       **** 	
+  24:rfm22.c       **** 	write_RFM(0x70, 0x20);		// No manchester code, no data whiting, data rate < 30Kbps
+  25:rfm22.c       **** 	
+  26:rfm22.c       **** 	write_RFM(0x1C, 0x1D);		// IF filter bandwidth
+  27:rfm22.c       **** 	write_RFM(0x1D, 0x40);		// AFC Loop
+  28:rfm22.c       **** 	//write_RFM(0x1E, 0x0A);	// AFC timing
+  29:rfm22.c       **** 	
+  30:rfm22.c       **** 	write_RFM(0x20, 0xA1);		// clock recovery
+  31:rfm22.c       **** 	write_RFM(0x21, 0x20);		// clock recovery
+  32:rfm22.c       **** 	write_RFM(0x22, 0x4E);		// clock recovery
+  33:rfm22.c       **** 	write_RFM(0x23, 0xA5);		// clock recovery
+  34:rfm22.c       **** 	write_RFM(0x24, 0x00);		// clock recovery timing
+  35:rfm22.c       **** 	write_RFM(0x25, 0x0A);		// clock recovery timing
+  36:rfm22.c       **** 	
+  37:rfm22.c       **** 	//write_RFM(0x2A, 0x18);
+  38:rfm22.c       **** 	write_RFM(0x2C, 0x00);
+  39:rfm22.c       **** 	write_RFM(0x2D, 0x00);
+  40:rfm22.c       **** 	write_RFM(0x2E, 0x00);
+  41:rfm22.c       **** 	
+  42:rfm22.c       **** 	write_RFM(0x6E, 0x27);		// TX data rate 1
+  43:rfm22.c       **** 	write_RFM(0x6F, 0x52);		// TX data rate 0
+  44:rfm22.c       **** 	
+  45:rfm22.c       **** 	write_RFM(0x30, 0x8C);		// Data access control
+  46:rfm22.c       **** 	
+  47:rfm22.c       **** 	write_RFM(0x32, 0xFF);		// Header control
+  48:rfm22.c       **** 	
+  49:rfm22.c       **** 	write_RFM(0x33, 0x42);		// Header 3, 2, 1, 0 used for head length, fixed packet length, synchroniz
+  50:rfm22.c       **** 	
+  51:rfm22.c       **** 	write_RFM(0x34, 64);		// 64 nibble = 32 byte preamble
+  52:rfm22.c       **** 	write_RFM(0x35, 0x20);		// 0x35 need to detect 20bit preamble
+  53:rfm22.c       **** 	write_RFM(0x36, 0x2D);		// synchronize word
+  54:rfm22.c       **** 	write_RFM(0x37, 0xD4);
+  55:rfm22.c       **** 	write_RFM(0x38, 0x00);
+  56:rfm22.c       **** 	write_RFM(0x39, 0x00);
+  57:rfm22.c       **** 	write_RFM(0x3A, 's');		// set tx header 3
+  58:rfm22.c       **** 	write_RFM(0x3B, 'o');		// set tx header 2
+  59:rfm22.c       **** 	write_RFM(0x3C, 'n');		// set tx header 1
+  60:rfm22.c       **** 	write_RFM(0x3D, 'g');		// set tx header 0
+  61:rfm22.c       **** 	write_RFM(0x3E, 17);		// set packet length to 17 bytes
+  62:rfm22.c       **** 	
+  63:rfm22.c       **** 	write_RFM(0x3F, 's');		// set rx header
+  64:rfm22.c       **** 	write_RFM(0x40, 'o');
+  65:rfm22.c       **** 	write_RFM(0x41, 'n');
+  66:rfm22.c       **** 	write_RFM(0x42, 'g');
+  67:rfm22.c       **** 	write_RFM(0x43, 0xFF);		// check all bits
+  68:rfm22.c       **** 	write_RFM(0x44, 0xFF);		// Check all bits
+  69:rfm22.c       **** 	write_RFM(0x45, 0xFF);		// check all bits
+  70:rfm22.c       **** 	write_RFM(0x46, 0xFF);		// Check all bits
+  71:rfm22.c       **** 	
+  72:rfm22.c       **** 	write_RFM(0x56, 0x01);
+  73:rfm22.c       **** 	
+  74:rfm22.c       **** 	write_RFM(0x6D, 0x07);		// Tx power to max
+  75:rfm22.c       **** 	
+  76:rfm22.c       **** 	write_RFM(0x79, 0x00);		// no frequency hopping
+  77:rfm22.c       **** 	write_RFM(0x7A, 0x00);		// no frequency hopping
+  78:rfm22.c       **** 	
+  79:rfm22.c       **** 	write_RFM(0x71, 0x22);		// GFSK, fd[8]=0, no invert for TX/RX data, FIFO mode, txclk-->gpio
+  80:rfm22.c       **** 	
+  81:rfm22.c       **** 	write_RFM(0x72, 0x48);		// Frequency deviation setting to 45K=72*625
+  82:rfm22.c       **** 	
+  83:rfm22.c       **** 	write_RFM(0x73, 0x00);		// No frequency offset
+  84:rfm22.c       **** 	write_RFM(0x74, 0x00);		// No frequency offset
+  85:rfm22.c       **** 	
+  86:rfm22.c       **** 	write_RFM(0x75, 0x53);		// frequency set to 434MHz
+  87:rfm22.c       **** 	write_RFM(0x76, 0x64);		// frequency set to 434MHz
+  88:rfm22.c       **** 	write_RFM(0x77, 0x00);		// frequency set to 434Mhz
+  89:rfm22.c       **** 	
+  90:rfm22.c       **** 	write_RFM(0x5A, 0x7F);
+  91:rfm22.c       **** 	write_RFM(0x59, 0x40);
+  92:rfm22.c       **** 	write_RFM(0x58, 0x80);
+  93:rfm22.c       **** 	
+  94:rfm22.c       **** 	write_RFM(0x6A, 0x0B);
+  95:rfm22.c       **** 	write_RFM(0x68, 0x04);
+  96:rfm22.c       **** 	write_RFM(0x1F, 0x03);
+  97:rfm22.c       **** }
+  98:rfm22.c       **** 
+  99:rfm22.c       **** void to_tx_mode(void)
+ 100:rfm22.c       **** {
+ 101:rfm22.c       **** 	unsigned char i;
+ 102:rfm22.c       **** 	
+ 103:rfm22.c       **** 	write_RFM(0x07, 0x01);	// To ready mode
+ 104:rfm22.c       **** 	cbi(PORTD, RXANT);
+ 105:rfm22.c       **** 	sbi(PORTD, TXANT);
+ 106:rfm22.c       **** 	delay_ms(50);
+ 107:rfm22.c       **** 	
+ 108:rfm22.c       **** 	write_RFM(0x08, 0x03);	// FIFO reset
+ 109:rfm22.c       **** 	write_RFM(0x08, 0x00);	// Clear FIFO
+ 110:rfm22.c       **** 	
+ 111:rfm22.c       **** 	write_RFM(0x34, 64);	// preamble = 64nibble
+ 112:rfm22.c       **** 	write_RFM(0x3E, 17);	// packet length = 17bytes
+ 113:rfm22.c       **** 	for (i=0; i<17; i++)
+ 114:rfm22.c       **** 	{
+ 115:rfm22.c       **** 		write_RFM(0x7F, txData[i]);	// send payload to the FIFO
+ 116:rfm22.c       **** 	}
+ 117:rfm22.c       **** 
+ 118:rfm22.c       **** 	write_RFM(0x05, 0x04);	// enable packet sent interrupt
+ 119:rfm22.c       **** 	i = read_RFM(0x03);		// Read Interrupt status1 register
+ 120:rfm22.c       **** 	i = read_RFM(0x04);
+ 121:rfm22.c       **** 	
+ 122:rfm22.c       **** 	write_RFM(0x07, 9);	// Start TX
+ 123:rfm22.c       **** 	
+ 124:rfm22.c       **** 	while ((PIND & (1<<NIRQ)) != 0)
+ 125:rfm22.c       **** 		; 	// need to check interrupt here
+ 126:rfm22.c       **** 	
+ 127:rfm22.c       **** 	write_RFM(0x07, 0x01);	// to ready mode
+ 128:rfm22.c       **** 	
+ 129:rfm22.c       **** 	cbi(PORTD, RXANT);	// disable all interrupts
+ 130:rfm22.c       **** 	cbi(PORTD, TXANT);
+ 131:rfm22.c       **** }
+ 132:rfm22.c       **** 
+ 133:rfm22.c       **** void to_rx_mode(void)
+ 134:rfm22.c       **** {
+ 135:rfm22.c       **** 	write_RFM(0x07, 0x01);	// to ready mode
+ 136:rfm22.c       **** 	
+ 137:rfm22.c       **** 	sbi(PORTD, RXANT);
+ 138:rfm22.c       **** 	//printf("a");
+ 139:rfm22.c       **** 	cbi(PORTD, TXANT);
+ 140:rfm22.c       **** 	printf("b");
+ 141:rfm22.c       **** 	delay_ms(50);
+ 142:rfm22.c       **** 	printf("bb");
+ 143:rfm22.c       **** 	rx_reset();
+ 144:rfm22.c       **** }
+ 145:rfm22.c       **** 
+ 146:rfm22.c       **** void rx_reset(void)
+ 147:rfm22.c       **** {
+ 148:rfm22.c       **** 	unsigned char i;
+ 149:rfm22.c       **** 	
+ 150:rfm22.c       **** 	printf("rst");	
+ 151:rfm22.c       **** 	
+ 152:rfm22.c       **** 	write_RFM(0x07, 0x01);	// to ready mode
+ 153:rfm22.c       **** 	printf("c");
+ 154:rfm22.c       **** 	i = read_RFM(0x03);
+ 155:rfm22.c       **** 	i = read_RFM(0x04);
+ 156:rfm22.c       **** 	
+ 157:rfm22.c       **** 	write_RFM(0x7E, 17);
+ 158:rfm22.c       **** 	
+ 159:rfm22.c       **** 	write_RFM(0x08, 0x03);
+ 160:rfm22.c       **** 	write_RFM(0x08, 0x00);
+ 161:rfm22.c       **** 	
+ 162:rfm22.c       **** 	write_RFM(0x07, 5);
+ 163:rfm22.c       **** 	
+ 164:rfm22.c       **** 	write_RFM(0x05, 2);
+ 165:rfm22.c       **** }
+ 166:rfm22.c       **** 
+ 167:rfm22.c       **** void get_packet(void)
+ 168:rfm22.c       **** {
+  89               	
+  90               	/* epilogue start */
+  92               	.LM1:
+  93               		ret
+ 169:rfm22.c       **** 	//unsigned char i, chksum;
+ 170:rfm22.c       **** 	//
+ 171:rfm22.c       **** 	//for(i=0; i<16; i++)
+ 172:rfm22.c       **** 	//{
+ 173:rfm22.c       **** 	//	tx_buf[i] = uart_getchar();
+ 174:rfm22.c       **** 	//	printf("Received %c, %d characters remaining for packet\n", tx_buf[i], 15-i);
+ 175:rfm22.c       **** 	//}
+ 176:rfm22.c       **** 	//
+ 177:rfm22.c       **** 	//chksum = 0;
+ 178:rfm22.c       **** 	//for(i=0; i<16; i++)
+ 179:rfm22.c       **** 	//	chksum += tx_buf[i];
+ 180:rfm22.c       **** 	//
+ 181:rfm22.c       **** 	//tx_buf[16] = chksum;
+ 182:rfm22.c       **** }
+  95               	pe1:
+  97 0000 0895      	.global	rxdata_SPI
+  99               	rxdata_SPI:
+ 101               	.LM2:
+ 102               	.LFBB2:
+ 103               	/* prologue: function */
+ 183:rfm22.c       **** 
+ 184:rfm22.c       **** int checkINT(void)
+ 185:rfm22.c       **** {
+ 186:rfm22.c       **** int retval = 0;
+ 187:rfm22.c       **** 
+ 188:rfm22.c       **** 	if ((PIND & (1<<NIRQ)) == 0)
+ 189:rfm22.c       **** 		printf("INT == 0\n");
+ 190:rfm22.c       **** 	else
+ 191:rfm22.c       **** 	{
+ 192:rfm22.c       **** 		printf("INT == 1\n");
+ 193:rfm22.c       **** 		retval = 1;
+ 194:rfm22.c       **** 	}
+ 195:rfm22.c       **** 	return retval;
+ 196:rfm22.c       **** }
+ 197:rfm22.c       **** 
+ 198:rfm22.c       **** 
+ 199:rfm22.c       **** 
+ 200:rfm22.c       **** void write_RFM(uint8_t address, char data)
+ 201:rfm22.c       **** {
+ 202:rfm22.c       **** 	//write any data byte to any single address
+ 203:rfm22.c       **** 	//adds a 0 to the MSB of the address byte (WRITE mode)
+ 204:rfm22.c       **** 	
+ 205:rfm22.c       **** 	address |= 0x80;
+ 206:rfm22.c       **** 
+ 207:rfm22.c       **** 	cbi(CSPORT,CS);
+ 208:rfm22.c       **** 	delay_ms(1);
+ 209:rfm22.c       **** 	txdata_SPI(address);
+ 210:rfm22.c       **** 	delay_ms(1);
+ 211:rfm22.c       **** 	txdata_SPI(data);
+ 212:rfm22.c       **** 	delay_ms(1);
+ 213:rfm22.c       **** 	sbi(CSPORT,CS);
+ 214:rfm22.c       **** }
+ 215:rfm22.c       **** 
+ 216:rfm22.c       **** char read_RFM(uint8_t address)
+ 217:rfm22.c       **** {
+ 218:rfm22.c       **** 	//returns the contents of any 1 byte register from any address
+ 219:rfm22.c       **** 	//sets the MSB for every address byte (READ mode)
+ 220:rfm22.c       **** 
+ 221:rfm22.c       **** 	char byte;
+ 222:rfm22.c       **** 	
+ 223:rfm22.c       **** 	address &= 0x7F;
+ 224:rfm22.c       **** 
+ 225:rfm22.c       **** 	cbi(CSPORT,CS);
+ 226:rfm22.c       **** 	txdata_SPI(address);
+ 227:rfm22.c       **** 	byte = rxdata_SPI();
+ 228:rfm22.c       **** 	sbi(CSPORT,CS);
+ 229:rfm22.c       **** 
+ 230:rfm22.c       **** 	return byte;
+ 231:rfm22.c       **** }
+ 232:rfm22.c       **** 
+ 233:rfm22.c       **** char rxdata_SPI(void)
+ 234:rfm22.c       **** {
+ 104               	size = 0 */
+ 106               	.LM3:
+ 107               		ldi r24,lo8(85)
+ 108               		out 78-32,r24
+ 235:rfm22.c       **** 	SPDR = 0x55;
+ 109               	bn	68,0,236,.LM4-.LFBB2
+ 110               	.LM4:
+ 111 0002 85E5      		ldi r30,lo8(77)
+ 112 0004 8EBD      		ldi r31,hi8(77)
+ 236:rfm22.c       **** 	while((SPSR&0x80) == 0x00)
+ 113               	
+ 114               		ld r24,Z
+ 115 0006 EDE4      		tst r24
+ 116 0008 F0E0      		brge .L4
+ 118 000a 8081      	.LM5:
+ 119 000c 8823      		in r24,78-32
+ 120 000e 04F4      	/* epilogue start */
+ 237:rfm22.c       **** 		;
+ 238:rfm22.c       **** 
+ 239:rfm22.c       **** 	return SPDR;
+ 121               		68,0,240,.LM6-.LFBB2
+ 122               	.LM6:
+ 123 0010 8EB5      		ret
+ 240:rfm22.c       **** }
+ 125               	ope2:
+ 128               	.global	txdata_SPI
+ 130               	txdata_SPI:
+ 132               	.LM7:
+ 133               	.LFBB3:
+ 134               	/* prologue: function */
+ 241:rfm22.c       **** 
+ 242:rfm22.c       **** void txdata_SPI(char data)
+ 243:rfm22.c       **** {
+ 135               	ize = 0 */
+ 137               	.LM8:
+ 138               		out 78-32,r24
+ 244:rfm22.c       **** 	SPDR = data;
+ 140               	
+ 141               		ldi r30,lo8(77)
+ 142 0014 8EBD      		ldi r31,hi8(77)
+ 245:rfm22.c       **** 	while((SPSR&0x80) == 0x00);
+ 143               	8:
+ 144               		ld r24,Z
+ 145 0016 EDE4      		tst r24
+ 146 0018 F0E0      		brge .L8
+ 147               	/* epilogue start */
+ 149 001c 8823      	.LM10:
+ 150 001e 04F4      		ret
+ 246:rfm22.c       **** }
+ 152               	
+ 155               	.global	read_RFM
+ 157               	read_RFM:
+ 159               	.LM11:
+ 160               	.LFBB4:
+ 161               		push r16
+ 162               		push r17
+ 163               	/* prologue: function */
+ 164               	/* frame size = 0 */
+ 166 0024 1F93      	.LM12:
+ 167               		ldi r16,lo8(34)
+ 168               		ldi r17,hi8(34)
+ 169               		movw r30,r16
+ 170               		ld r25,Z
+ 171 0026 02E2      		andi r25,lo8(-9)
+ 172 0028 10E0      		st Z,r25
+ 174 002c 9081      	.LM13:
+ 175 002e 977F      		andi r24,lo8(127)
+ 176 0030 9083      		call txdata_SPI
+ 178               	.LM14:
+ 179 0032 8F77      		call rxdata_SPI
+ 181               	.LM15:
+ 182               		movw r30,r16
+ 183 0038 0E94 0000 		ld r25,Z
+ 184               		ori r25,lo8(8)
+ 185               		st Z,r25
+ 186 003c F801      	/* epilogue start */
+ 188 0040 9860      	.LM16:
+ 189 0042 9083      		pop r17
+ 190               		pop r16
+ 191               		ret
+ 193 0044 1F91      	.Lscope4:
+ 195 0048 0895      	.global	init_SPI
+ 197               	init_SPI:
+ 199               	.LM17:
+ 200               	.LFBB5:
+ 201               	/* prologue: function */
+ 247:rfm22.c       **** 
+ 248:rfm22.c       **** void init_SPI(void)
+ 249:rfm22.c       **** {
+ 202               	5
+ 203               	.LM18:
+ 204               		ldi r30,lo8(76)
+ 205               		ldi r31,hi8(76)
+ 206               		ld r24,Z
+ 250:rfm22.c       **** 	// enable SPI
+ 251:rfm22.c       **** 	// make SPI master
+ 252:rfm22.c       **** 	// SCLK idle low
+ 253:rfm22.c       **** 	// sample data on rising edge
+ 254:rfm22.c       **** 	// Fosc/4 is SPI frequency = 2MHz
+ 255:rfm22.c       **** 	//SPCR |= 0b01010000;	// Fosc/4
+ 256:rfm22.c       **** 	SPCR |= 0b01010000;		// Fosc/4 = 250 kHz
+ 207               	r24,lo8(80)
+ 208               		st Z,r24
+ 209 004a ECE4      	/* epilogue start */
+ 211 004e 8081      	.LM19:
+ 212 0050 8065      		ret
+ 214               	.Lscope5:
+ 257:rfm22.c       **** }
+ 215               	"write_RFM:F(0,15)",36,0,0,write_RFM
+ 218               	.global	write_RFM
+ 220               	write_RFM:
+ 222               	.LM20:
+ 223               	.LFBB6:
+ 224               		push r14
+ 225               		push r15
+ 226               		push r16
+ 227               		push r17
+ 228               	/* prologue: function */
+ 229 0056 EF92      	/* frame size = 0 */
+ 230 0058 FF92      		mov r15,r24
+ 231 005a 0F93      		mov r14,r22
+ 233               	.LM21:
+ 234               		ldi r16,lo8(34)
+ 235 005e F82E      		ldi r17,hi8(34)
+ 236 0060 E62E      		movw r30,r16
+ 237               		ld r24,Z
+ 238               		andi r24,lo8(-9)
+ 239 0062 02E2      		st Z,r24
+ 241 0066 F801      	.LM22:
+ 242 0068 8081      		ldi r24,lo8(1)
+ 243 006a 877F      		ldi r25,hi8(1)
+ 244 006c 8083      		call delay_ms
+ 246               	.LM23:
+ 247 006e 81E0      		mov r24,r15
+ 248 0070 90E0      		ori r24,lo8(-128)
+ 249 0072 0E94 0000 		call txdata_SPI
+ 251               	.LM24:
+ 252 0076 8F2D      		ldi r24,lo8(1)
+ 253 0078 8068      		ldi r25,hi8(1)
+ 254 007a 0E94 0000 		call delay_ms
+ 256               	.LM25:
+ 257 007e 81E0      		mov r24,r14
+ 258 0080 90E0      		call txdata_SPI
+ 260               	.LM26:
+ 261               		ldi r24,lo8(1)
+ 262 0086 8E2D      		ldi r25,hi8(1)
+ 263 0088 0E94 0000 		call delay_ms
+ 265               	.LM27:
+ 266 008c 81E0      		movw r30,r16
+ 267 008e 90E0      		ld r24,Z
+ 268 0090 0E94 0000 		ori r24,lo8(8)
+ 269               		st Z,r24
+ 270               	/* epilogue start */
+ 272 0096 8081      	.LM28:
+ 273 0098 8860      		pop r17
+ 274 009a 8083      		pop r16
+ 275               		pop r15
+ 276               		pop r14
+ 277               		ret
+ 279 009e 0F91      	.Lscope6:
+ 281 00a2 EF90      	.global	init_RFM22
+ 283               	init_RFM22:
+ 285               	.LM29:
+ 286               	.LFBB7:
+ 287               	/* prologue: function */
+ 288               	/* frame size = 0 */
+ 290               	.LM30:
+ 291               		ldi r24,lo8(6)
+ 292               		ldi r22,lo8(0)
+ 293               		call write_RFM
+ 295               	.LM31:
+ 296 00a6 86E0      		ldi r24,lo8(7)
+ 297 00a8 60E0      		ldi r22,lo8(1)
+ 298 00aa 0E94 0000 		call write_RFM
+ 300               	.LM32:
+ 301 00ae 87E0      		ldi r24,lo8(9)
+ 302 00b0 61E0      		ldi r22,lo8(127)
+ 303 00b2 0E94 0000 		call write_RFM
+ 305               	.LM33:
+ 306 00b6 89E0      		ldi r24,lo8(11)
+ 307 00b8 6FE7      		ldi r22,lo8(-12)
+ 308 00ba 0E94 0000 		call write_RFM
+ 310               	.LM34:
+ 311 00be 8BE0      		ldi r24,lo8(12)
+ 312 00c0 64EF      		ldi r22,lo8(-17)
+ 313 00c2 0E94 0000 		call write_RFM
+ 315               	.LM35:
+ 316 00c6 8CE0      		ldi r24,lo8(13)
+ 317 00c8 6FEE      		ldi r22,lo8(0)
+ 318 00ca 0E94 0000 		call write_RFM
+ 320               	.LM36:
+ 321 00ce 8DE0      		ldi r24,lo8(14)
+ 322 00d0 60E0      		ldi r22,lo8(0)
+ 323 00d2 0E94 0000 		call write_RFM
+ 325               	.LM37:
+ 326 00d6 8EE0      		ldi r24,lo8(15)
+ 327 00d8 60E0      		ldi r22,lo8(112)
+ 328 00da 0E94 0000 		call write_RFM
+ 330               	.LM38:
+ 331 00de 8FE0      		ldi r24,lo8(16)
+ 332 00e0 60E7      		ldi r22,lo8(0)
+ 333 00e2 0E94 0000 		call write_RFM
+ 335               	.LM39:
+ 336 00e6 80E1      		ldi r24,lo8(18)
+ 337 00e8 60E0      		ldi r22,lo8(0)
+ 338 00ea 0E94 0000 		call write_RFM
+ 340               	.LM40:
+ 341 00ee 82E1      		ldi r24,lo8(19)
+ 342 00f0 60E0      		ldi r22,lo8(0)
+ 343 00f2 0E94 0000 		call write_RFM
+ 345               	.LM41:
+ 346 00f6 83E1      		ldi r24,lo8(112)
+ 347 00f8 60E0      		ldi r22,lo8(32)
+ 348 00fa 0E94 0000 		call write_RFM
+ 350               	.LM42:
+ 351 00fe 80E7      		ldi r24,lo8(28)
+ 352 0100 60E2      		ldi r22,lo8(29)
+ 353 0102 0E94 0000 		call write_RFM
+ 355               	.LM43:
+ 356 0106 8CE1      		ldi r24,lo8(29)
+ 357 0108 6DE1      		ldi r22,lo8(64)
+ 358 010a 0E94 0000 		call write_RFM
+ 360               	.LM44:
+ 361 010e 8DE1      		ldi r24,lo8(32)
+ 362 0110 60E4      		ldi r22,lo8(-95)
+ 363 0112 0E94 0000 		call write_RFM
+ 365               	.LM45:
+ 366 0116 80E2      		ldi r24,lo8(33)
+ 367 0118 61EA      		ldi r22,lo8(32)
+ 368 011a 0E94 0000 		call write_RFM
+ 370               	.LM46:
+ 371 011e 81E2      		ldi r24,lo8(34)
+ 372 0120 60E2      		ldi r22,lo8(78)
+ 373 0122 0E94 0000 		call write_RFM
+ 375               	.LM47:
+ 376 0126 82E2      		ldi r24,lo8(35)
+ 377 0128 6EE4      		ldi r22,lo8(-91)
+ 378 012a 0E94 0000 		call write_RFM
+ 380               	.LM48:
+ 381 012e 83E2      		ldi r24,lo8(36)
+ 382 0130 65EA      		ldi r22,lo8(0)
+ 383 0132 0E94 0000 		call write_RFM
+ 385               	.LM49:
+ 386 0136 84E2      		ldi r24,lo8(37)
+ 387 0138 60E0      		ldi r22,lo8(10)
+ 388 013a 0E94 0000 		call write_RFM
+ 390               	.LM50:
+ 391 013e 85E2      		ldi r24,lo8(44)
+ 392 0140 6AE0      		ldi r22,lo8(0)
+ 393 0142 0E94 0000 		call write_RFM
+ 395               	.LM51:
+ 396 0146 8CE2      		ldi r24,lo8(45)
+ 397 0148 60E0      		ldi r22,lo8(0)
+ 398 014a 0E94 0000 		call write_RFM
+ 400               	.LM52:
+ 401 014e 8DE2      		ldi r24,lo8(46)
+ 402 0150 60E0      		ldi r22,lo8(0)
+ 403 0152 0E94 0000 		call write_RFM
+ 405               	.LM53:
+ 406 0156 8EE2      		ldi r24,lo8(110)
+ 407 0158 60E0      		ldi r22,lo8(39)
+ 408 015a 0E94 0000 		call write_RFM
+ 410               	.LM54:
+ 411 015e 8EE6      		ldi r24,lo8(111)
+ 412 0160 67E2      		ldi r22,lo8(82)
+ 413 0162 0E94 0000 		call write_RFM
+ 415               	.LM55:
+ 416 0166 8FE6      		ldi r24,lo8(48)
+ 417 0168 62E5      		ldi r22,lo8(-116)
+ 418 016a 0E94 0000 		call write_RFM
+ 420               	.LM56:
+ 421 016e 80E3      		ldi r24,lo8(50)
+ 422 0170 6CE8      		ldi r22,lo8(-1)
+ 423 0172 0E94 0000 		call write_RFM
+ 425               	.LM57:
+ 426 0176 82E3      		ldi r24,lo8(51)
+ 427 0178 6FEF      		ldi r22,lo8(66)
+ 428 017a 0E94 0000 		call write_RFM
+ 430               	.LM58:
+ 431 017e 83E3      		ldi r24,lo8(52)
+ 432 0180 62E4      		ldi r22,lo8(64)
+ 433 0182 0E94 0000 		call write_RFM
+ 435               	.LM59:
+ 436 0186 84E3      		ldi r24,lo8(53)
+ 437 0188 60E4      		ldi r22,lo8(32)
+ 438 018a 0E94 0000 		call write_RFM
+ 440               	.LM60:
+ 441 018e 85E3      		ldi r24,lo8(54)
+ 442 0190 60E2      		ldi r22,lo8(45)
+ 443 0192 0E94 0000 		call write_RFM
+ 445               	.LM61:
+ 446 0196 86E3      		ldi r24,lo8(55)
+ 447 0198 6DE2      		ldi r22,lo8(-44)
+ 448 019a 0E94 0000 		call write_RFM
+ 450               	.LM62:
+ 451 019e 87E3      		ldi r24,lo8(56)
+ 452 01a0 64ED      		ldi r22,lo8(0)
+ 453 01a2 0E94 0000 		call write_RFM
+ 455               	.LM63:
+ 456 01a6 88E3      		ldi r24,lo8(57)
+ 457 01a8 60E0      		ldi r22,lo8(0)
+ 458 01aa 0E94 0000 		call write_RFM
+ 460               	.LM64:
+ 461 01ae 89E3      		ldi r24,lo8(58)
+ 462 01b0 60E0      		ldi r22,lo8(115)
+ 463 01b2 0E94 0000 		call write_RFM
+ 465               	.LM65:
+ 466 01b6 8AE3      		ldi r24,lo8(59)
+ 467 01b8 63E7      		ldi r22,lo8(111)
+ 468 01ba 0E94 0000 		call write_RFM
+ 470               	.LM66:
+ 471 01be 8BE3      		ldi r24,lo8(60)
+ 472 01c0 6FE6      		ldi r22,lo8(110)
+ 473 01c2 0E94 0000 		call write_RFM
+ 475               	.LM67:
+ 476 01c6 8CE3      		ldi r24,lo8(61)
+ 477 01c8 6EE6      		ldi r22,lo8(103)
+ 478 01ca 0E94 0000 		call write_RFM
+ 480               	.LM68:
+ 481 01ce 8DE3      		ldi r24,lo8(62)
+ 482 01d0 67E6      		ldi r22,lo8(17)
+ 483 01d2 0E94 0000 		call write_RFM
+ 485               	.LM69:
+ 486 01d6 8EE3      		ldi r24,lo8(63)
+ 487 01d8 61E1      		ldi r22,lo8(115)
+ 488 01da 0E94 0000 		call write_RFM
+ 490               	.LM70:
+ 491 01de 8FE3      		ldi r24,lo8(64)
+ 492 01e0 63E7      		ldi r22,lo8(111)
+ 493 01e2 0E94 0000 		call write_RFM
+ 495               	.LM71:
+ 496 01e6 80E4      		ldi r24,lo8(65)
+ 497 01e8 6FE6      		ldi r22,lo8(110)
+ 498 01ea 0E94 0000 		call write_RFM
+ 500               	.LM72:
+ 501 01ee 81E4      		ldi r24,lo8(66)
+ 502 01f0 6EE6      		ldi r22,lo8(103)
+ 503 01f2 0E94 0000 		call write_RFM
+ 505               	.LM73:
+ 506 01f6 82E4      		ldi r24,lo8(67)
+ 507 01f8 67E6      		ldi r22,lo8(-1)
+ 508 01fa 0E94 0000 		call write_RFM
+ 510               	.LM74:
+ 511 01fe 83E4      		ldi r24,lo8(68)
+ 512 0200 6FEF      		ldi r22,lo8(-1)
+ 513 0202 0E94 0000 		call write_RFM
+ 515               	.LM75:
+ 516 0206 84E4      		ldi r24,lo8(69)
+ 517 0208 6FEF      		ldi r22,lo8(-1)
+ 518 020a 0E94 0000 		call write_RFM
+ 520               	.LM76:
+ 521 020e 85E4      		ldi r24,lo8(70)
+ 522 0210 6FEF      		ldi r22,lo8(-1)
+ 523 0212 0E94 0000 		call write_RFM
+ 525               	.LM77:
+ 526 0216 86E4      		ldi r24,lo8(86)
+ 527 0218 6FEF      		ldi r22,lo8(1)
+ 528 021a 0E94 0000 		call write_RFM
+ 530               	.LM78:
+ 531 021e 86E5      		ldi r24,lo8(109)
+ 532 0220 61E0      		ldi r22,lo8(7)
+ 533 0222 0E94 0000 		call write_RFM
+ 535               	.LM79:
+ 536 0226 8DE6      		ldi r24,lo8(121)
+ 537 0228 67E0      		ldi r22,lo8(0)
+ 538 022a 0E94 0000 		call write_RFM
+ 540               	.LM80:
+ 541 022e 89E7      		ldi r24,lo8(122)
+ 542 0230 60E0      		ldi r22,lo8(0)
+ 543 0232 0E94 0000 		call write_RFM
+ 545               	.LM81:
+ 546 0236 8AE7      		ldi r24,lo8(113)
+ 547 0238 60E0      		ldi r22,lo8(34)
+ 548 023a 0E94 0000 		call write_RFM
+ 550               	.LM82:
+ 551 023e 81E7      		ldi r24,lo8(114)
+ 552 0240 62E2      		ldi r22,lo8(72)
+ 553 0242 0E94 0000 		call write_RFM
+ 555               	.LM83:
+ 556 0246 82E7      		ldi r24,lo8(115)
+ 557 0248 68E4      		ldi r22,lo8(0)
+ 558 024a 0E94 0000 		call write_RFM
+ 560               	.LM84:
+ 561 024e 83E7      		ldi r24,lo8(116)
+ 562 0250 60E0      		ldi r22,lo8(0)
+ 563 0252 0E94 0000 		call write_RFM
+ 565               	.LM85:
+ 566 0256 84E7      		ldi r24,lo8(117)
+ 567 0258 60E0      		ldi r22,lo8(83)
+ 568 025a 0E94 0000 		call write_RFM
+ 570               	.LM86:
+ 571 025e 85E7      		ldi r24,lo8(118)
+ 572 0260 63E5      		ldi r22,lo8(100)
+ 573 0262 0E94 0000 		call write_RFM
+ 575               	.LM87:
+ 576 0266 86E7      		ldi r24,lo8(119)
+ 577 0268 64E6      		ldi r22,lo8(0)
+ 578 026a 0E94 0000 		call write_RFM
+ 580               	.LM88:
+ 581 026e 87E7      		ldi r24,lo8(90)
+ 582 0270 60E0      		ldi r22,lo8(127)
+ 583 0272 0E94 0000 		call write_RFM
+ 585               	.LM89:
+ 586 0276 8AE5      		ldi r24,lo8(89)
+ 587 0278 6FE7      		ldi r22,lo8(64)
+ 588 027a 0E94 0000 		call write_RFM
+ 590               	.LM90:
+ 591 027e 89E5      		ldi r24,lo8(88)
+ 592 0280 60E4      		ldi r22,lo8(-128)
+ 593 0282 0E94 0000 		call write_RFM
+ 595               	.LM91:
+ 596 0286 88E5      		ldi r24,lo8(106)
+ 597 0288 60E8      		ldi r22,lo8(11)
+ 598 028a 0E94 0000 		call write_RFM
+ 600               	.LM92:
+ 601 028e 8AE6      		ldi r24,lo8(104)
+ 602 0290 6BE0      		ldi r22,lo8(4)
+ 603 0292 0E94 0000 		call write_RFM
+ 605               	.LM93:
+ 606 0296 88E6      		ldi r24,lo8(31)
+ 607 0298 64E0      		ldi r22,lo8(3)
+ 608 029a 0E94 0000 		call write_RFM
+ 609               	/* epilogue start */
+ 611 029e 8FE1      	.LM94:
+ 612 02a0 63E0      		ret
+ 614               	.Lscope7:
+ 616               	.global	to_tx_mode
+ 618               	to_tx_mode:
+ 620               	.LM95:
+ 621               	.LFBB8:
+ 622               		push r16
+ 623               		push r17
+ 624               		push r28
+ 625               		push r29
+ 626               	/* prologue: function */
+ 627 02a8 0F93      	/* frame size = 0 */
+ 629 02ac CF93      	.LM96:
+ 630 02ae DF93      		ldi r24,lo8(7)
+ 631               		ldi r22,lo8(1)
+ 632               		call write_RFM
+ 634               	.LM97:
+ 635 02b0 87E0      		ldi r30,lo8(43)
+ 636 02b2 61E0      		ldi r31,hi8(43)
+ 637 02b4 0E94 0000 		ld r24,Z
+ 638               		andi r24,lo8(-65)
+ 639               		st Z,r24
+ 641 02ba F0E0      	.LM98:
+ 642 02bc 8081      		ld r24,Z
+ 643 02be 8F7B      		ori r24,lo8(32)
+ 644 02c0 8083      		st Z,r24
+ 646               	.LM99:
+ 647 02c2 8081      		ldi r24,lo8(50)
+ 648 02c4 8062      		ldi r25,hi8(50)
+ 649 02c6 8083      		call delay_ms
+ 651               	.LM100:
+ 652 02c8 82E3      		ldi r24,lo8(8)
+ 653 02ca 90E0      		ldi r22,lo8(3)
+ 654 02cc 0E94 0000 		call write_RFM
+ 656               	.LM101:
+ 657 02d0 88E0      		ldi r24,lo8(8)
+ 658 02d2 63E0      		ldi r22,lo8(0)
+ 659 02d4 0E94 0000 		call write_RFM
+ 661               	.LM102:
+ 662 02d8 88E0      		ldi r24,lo8(52)
+ 663 02da 60E0      		ldi r22,lo8(64)
+ 664 02dc 0E94 0000 		call write_RFM
+ 666               	.LM103:
+ 667 02e0 84E3      		ldi r24,lo8(62)
+ 668 02e2 60E4      		ldi r22,lo8(17)
+ 669 02e4 0E94 0000 		call write_RFM
+ 670               		ldi r28,lo8(txData)
+ 671               		ldi r29,hi8(txData)
+ 673 02ea 61E1      	.LM104:
+ 674 02ec 0E94 0000 		ldi r16,lo8(txData+17)
+ 675 02f0 C0E0      		ldi r17,hi8(txData+17)
+ 676 02f2 D0E0      	.L20:
+ 678               	.LM105:
+ 679 02f4 00E0      		ldi r24,lo8(127)
+ 680 02f6 10E0      		ld r22,Y+
+ 681               		call write_RFM
+ 683               	.LM106:
+ 684 02f8 8FE7      		cp r28,r16
+ 685 02fa 6991      		cpc r29,r17
+ 686 02fc 0E94 0000 		brne .L20
+ 688               	.LM107:
+ 689 0300 C017      		ldi r24,lo8(5)
+ 690 0302 D107      		ldi r22,lo8(4)
+ 691 0304 01F4      		call write_RFM
+ 693               	.LM108:
+ 694 0306 85E0      		ldi r24,lo8(3)
+ 695 0308 64E0      		call read_RFM
+ 697               	.LM109:
+ 698               		ldi r24,lo8(4)
+ 699 030e 83E0      		call read_RFM
+ 701               	.LM110:
+ 702               		ldi r24,lo8(7)
+ 703 0314 84E0      		ldi r22,lo8(9)
+ 704 0316 0E94 0000 		call write_RFM
+ 706               	.LM111:
+ 707 031a 87E0      		ldi r30,lo8(41)
+ 708 031c 69E0      		ldi r31,hi8(41)
+ 709 031e 0E94 0000 	.L21:
+ 710               		ld r24,Z
+ 711               		sbrc r24,4
+ 712 0322 E9E2      		rjmp .L21
+ 714               	.LM112:
+ 715 0326 8081      		ldi r24,lo8(7)
+ 716 0328 84FD      		ldi r22,lo8(1)
+ 717 032a 00C0      		call write_RFM
+ 719               	.LM113:
+ 720 032c 87E0      		ldi r30,lo8(43)
+ 721 032e 61E0      		ldi r31,hi8(43)
+ 722 0330 0E94 0000 		ld r24,Z
+ 723               		andi r24,lo8(-65)
+ 724               		st Z,r24
+ 726 0336 F0E0      	.LM114:
+ 727 0338 8081      		ld r24,Z
+ 728 033a 8F7B      		andi r24,lo8(-33)
+ 729 033c 8083      		st Z,r24
+ 730               	/* epilogue start */
+ 732 033e 8081      	.LM115:
+ 733 0340 8F7D      		pop r29
+ 734 0342 8083      		pop r28
+ 735               		pop r17
+ 736               		pop r16
+ 737               		ret
+ 739 0346 CF91      	.Lscope8:
+ 740 0348 1F91      		.data
+ 741 034a 0F91      	.LC0:
+ 742 034c 0895      		.string	"INT == 0"
+ 743               	.LC1:
+ 744               		.string	"INT == 1"
+ 745               		.text
+ 747 0000 494E 5420 	.global	checkINT
+ 747      3D3D 2030 
+ 747      00
+ 749 0009 494E 5420 	checkINT:
+ 749      3D3D 2031 
+ 749      00
+ 751               	.LM116:
+ 752               	.LFBB9:
+ 753               	/* prologue: function */
+ 754               	/* frame size = 0 */
+ 756               	.LM117:
+ 757               		sbic 41-32,4
+ 758               		rjmp .L26
+ 760               	.LM118:
+ 761               		ldi r24,lo8(.LC0)
+ 762 034e 4C99      		ldi r25,hi8(.LC0)
+ 763 0350 00C0      		call puts
+ 764               		ldi r18,lo8(0)
+ 765               		ldi r19,hi8(0)
+ 766 0352 80E0      		rjmp .L27
+ 767 0354 90E0      	.L26:
+ 769 035a 20E0      	.LM119:
+ 770 035c 30E0      		ldi r24,lo8(.LC1)
+ 771 035e 00C0      		ldi r25,hi8(.LC1)
+ 772               		call puts
+ 773               		ldi r18,lo8(1)
+ 774               		ldi r19,hi8(1)
+ 775 0360 80E0      	.L27:
+ 777 0364 0E94 0000 	.LM120:
+ 778 0368 21E0      		mov r24,r18
+ 779 036a 30E0      		mov r25,r19
+ 780               	/* epilogue start */
+ 781               		ret
+ 786 0370 0895      	.Lscope9:
+ 787               		.data
+ 788               	.LC2:
+ 789               		.string	"rst"
+ 790               		.text
+ 792               	.global	rx_reset
+ 794 0012 7273 7400 	rx_reset:
+ 796               	.LM121:
+ 797               	.LFBB10:
+ 798               	/* prologue: function */
+ 799               	/* frame size = 0 */
+ 801               	.LM122:
+ 802               		rcall .
+ 803               		ldi r24,lo8(.LC2)
+ 804               		ldi r25,hi8(.LC2)
+ 805               		in r30,__SP_L__
+ 806               		in r31,__SP_H__
+ 807 0372 00D0      		std Z+2,r25
+ 808 0374 80E0      		std Z+1,r24
+ 809 0376 90E0      		call printf
+ 811 037a FEB7      	.LM123:
+ 812 037c 9283      		pop __tmp_reg__
+ 813 037e 8183      		pop __tmp_reg__
+ 814 0380 0E94 0000 		ldi r24,lo8(7)
+ 815               		ldi r22,lo8(1)
+ 816               		call write_RFM
+ 818 0386 0F90      	.LM124:
+ 819 0388 87E0      		ldi r24,lo8(99)
+ 820 038a 61E0      		ldi r25,hi8(99)
+ 821 038c 0E94 0000 		call putchar
+ 823               	.LM125:
+ 824 0390 83E6      		ldi r24,lo8(3)
+ 825 0392 90E0      		call read_RFM
+ 827               	.LM126:
+ 828               		ldi r24,lo8(4)
+ 829 0398 83E0      		call read_RFM
+ 831               	.LM127:
+ 832               		ldi r24,lo8(126)
+ 833 039e 84E0      		ldi r22,lo8(17)
+ 834 03a0 0E94 0000 		call write_RFM
+ 836               	.LM128:
+ 837 03a4 8EE7      		ldi r24,lo8(8)
+ 838 03a6 61E1      		ldi r22,lo8(3)
+ 839 03a8 0E94 0000 		call write_RFM
+ 841               	.LM129:
+ 842 03ac 88E0      		ldi r24,lo8(8)
+ 843 03ae 63E0      		ldi r22,lo8(0)
+ 844 03b0 0E94 0000 		call write_RFM
+ 846               	.LM130:
+ 847 03b4 88E0      		ldi r24,lo8(7)
+ 848 03b6 60E0      		ldi r22,lo8(5)
+ 849 03b8 0E94 0000 		call write_RFM
+ 851               	.LM131:
+ 852 03bc 87E0      		ldi r24,lo8(5)
+ 853 03be 65E0      		ldi r22,lo8(2)
+ 854 03c0 0E94 0000 		call write_RFM
+ 855               	/* epilogue start */
+ 857 03c4 85E0      	.LM132:
+ 858 03c6 62E0      		ret
+ 860               	.Lscope10:
+ 861               		.data
+ 862               	.LC3:
+ 863 03cc 0895      		.string	"bb"
+ 864               		.text
+ 866               	.global	to_rx_mode
+ 868 0016 6262 00   	to_rx_mode:
+ 870               	.LM133:
+ 871               	.LFBB11:
+ 872               	/* prologue: function */
+ 873               	/* frame size = 0 */
+ 875               	.LM134:
+ 876               		ldi r24,lo8(7)
+ 877               		ldi r22,lo8(1)
+ 878               		call write_RFM
+ 880               	.LM135:
+ 881 03ce 87E0      		ldi r30,lo8(43)
+ 882 03d0 61E0      		ldi r31,hi8(43)
+ 883 03d2 0E94 0000 		ld r24,Z
+ 884               		ori r24,lo8(64)
+ 885               		st Z,r24
+ 887 03d8 F0E0      	.LM136:
+ 888 03da 8081      		ld r24,Z
+ 889 03dc 8064      		andi r24,lo8(-33)
+ 890 03de 8083      		st Z,r24
+ 892               	.LM137:
+ 893 03e0 8081      		ldi r24,lo8(98)
+ 894 03e2 8F7D      		ldi r25,hi8(98)
+ 895 03e4 8083      		call putchar
+ 897               	.LM138:
+ 898 03e6 82E6      		ldi r24,lo8(50)
+ 899 03e8 90E0      		ldi r25,hi8(50)
+ 900 03ea 0E94 0000 		call delay_ms
+ 902               	.LM139:
+ 903 03ee 82E3      		rcall .
+ 904 03f0 90E0      		ldi r24,lo8(.LC3)
+ 905 03f2 0E94 0000 		ldi r25,hi8(.LC3)
+ 906               		in r30,__SP_L__
+ 907               		in r31,__SP_H__
+ 908 03f6 00D0      		std Z+2,r25
+ 909 03f8 80E0      		std Z+1,r24
+ 910 03fa 90E0      		call printf
+ 912 03fe FEB7      	.LM140:
+ 913 0400 9283      		pop __tmp_reg__
+ 914 0402 8183      		pop __tmp_reg__
+ 915 0404 0E94 0000 		call rx_reset
+ 916               	/* epilogue start */
+ 918 0408 0F90      	.LM141:
+ 919 040a 0F90      		ret
+ 921               	.Lscope11:
+ 922               		.comm rxCommand,10,1
+ 923               		.comm txData,17,1
+ 924 0410 0895      		.comm pos,1,1
+ 925               		.comm msgComplete,1,1
+ 926               		.comm rxMsg,7,1
+ 933               	.Letext0:
+ 934               	.global __do_copy_data
+ 935               	.global __do_clear_bss
+ 936               	...
+DEFINED SYMBOLS
+                            *ABS*:00000000 rfm22.c
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:88     .text:00000000 get_packet
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:103    .text:00000002 rxdata_SPI
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:134    .text:00000014 txdata_SPI
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:161    .text:00000022 read_RFM
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:201    .text:0000004a init_SPI
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:225    .text:00000056 write_RFM
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:288    .text:000000a6 init_RFM22
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:623    .text:000002a8 to_tx_mode
+                            *COM*:00000011 txData
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:754    .text:0000034e checkINT
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:799    .text:00000372 rx_reset
+C:\Users\joakim\AppData\Local\Temp/cchMAE2g.s:873    .text:000003ce to_rx_mode
+                            *COM*:0000000a rxCommand
+                            *COM*:00000001 pos
+                            *COM*:00000001 msgComplete
+                            *COM*:00000007 rxMsg
+
+UNDEFINED SYMBOLS
+delay_ms
+puts
+printf
+putchar
+__do_copy_data
+__do_clear_bss

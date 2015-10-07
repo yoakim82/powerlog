@@ -1,0 +1,185 @@
+   1               		.file	"hdlc.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  86               	.global	pollMsg
+  88               	pollMsg:
+   1:hdlc.c        **** #include <avr/interrupt.h>
+   2:hdlc.c        **** 
+   3:hdlc.c        **** #include "hdlc.h"
+   4:hdlc.c        **** #include "rfm22.h"
+   5:hdlc.c        **** 	
+   6:hdlc.c        **** 
+   7:hdlc.c        **** 
+   8:hdlc.c        **** // serial port 1 (to Aircom) interupt
+   9:hdlc.c        **** /*
+  10:hdlc.c        **** ISR(USART1_RX_vect) 
+  11:hdlc.c        **** {
+  12:hdlc.c        **** 	unsigned char rxByte;
+  13:hdlc.c        **** 	cli();						// disable interrupts
+  14:hdlc.c        **** 
+  15:hdlc.c        **** 		rxByte = UDR1;
+  16:hdlc.c        **** 		
+  17:hdlc.c        **** 		if (rxByte == 0x7E)
+  18:hdlc.c        **** 			pos = 0;
+  19:hdlc.c        **** 		else if (rxByte == 0x7D)
+  20:hdlc.c        **** 			msgComplete = 1;
+  21:hdlc.c        **** 		else
+  22:hdlc.c        **** 			rxCommand[pos++] = rxByte;
+  23:hdlc.c        **** 
+  24:hdlc.c        **** 
+  25:hdlc.c        **** 	sei();
+  26:hdlc.c        **** }
+  27:hdlc.c        **** */
+  28:hdlc.c        **** 
+  29:hdlc.c        **** unsigned char pollMsg(void)
+  30:hdlc.c        **** {/*
+  90               	.LM1:
+  91               		ldi r24,lo8(0)
+  92               	/* epilogue start */
+  93               		ret
+  31:hdlc.c        **** 
+  32:hdlc.c        **** 	if (pos > 0 && msgComplete == 1)
+  33:hdlc.c        **** 	{	
+  34:hdlc.c        **** 		rxMsg.devAddr = rxCommand[0];
+  35:hdlc.c        **** 		rxMsg.command = rxCommand[1];
+  36:hdlc.c        **** 		rxMsg.size = rxCommand[2];
+  37:hdlc.c        **** 		rxMsg.data_ptr = &rxCommand[3]; // set pointer to rx buffer
+  38:hdlc.c        **** 		rxMsg.chksum = rxMsg.size + 3;
+  39:hdlc.c        **** 		
+  40:hdlc.c        **** 		return 1;
+  41:hdlc.c        **** 	}
+  42:hdlc.c        **** 	else*/
+  43:hdlc.c        **** 		return 0;
+  94               	68,0,43,.LM1-.LFBB1
+  95               	.LM1:
+  96 0000 80E0      		ldi r24,lo8(0)
+  97               	/* epilogue start */
+  98 0002 0895      		ret
+ 100               	.Lscope1:
+ 103               	.global	sendMsg
+ 105               	sendMsg:
+  44:hdlc.c        **** 
+  45:hdlc.c        **** }
+  46:hdlc.c        **** 
+ 106               	64,0,0,20
+ 107               	.global	sendMsg
+ 109               	sendMsg:
+ 111 0004 AC01      	.LM2:
+  47:hdlc.c        **** 
+  48:hdlc.c        **** unsigned char sendMsg(int size, char *data_ptr)
+  49:hdlc.c        **** {
+  50:hdlc.c        **** 	
+  51:hdlc.c        **** 	unsigned char i;
+  52:hdlc.c        **** 	//unsigned char header[4];
+  53:hdlc.c        **** 	unsigned char chk = 0;
+  54:hdlc.c        **** 	
+  55:hdlc.c        **** 	//header[0] = 0x7E; // Start byte
+  56:hdlc.c        **** 	//header[1] = msg.devAddr;
+  57:hdlc.c        **** 	//header[2] = msg.command;
+  58:hdlc.c        **** 	//header[3] = msg.size;
+  59:hdlc.c        **** //
+  60:hdlc.c        **** 	
+  61:hdlc.c        **** 	
+  62:hdlc.c        **** 	//// send header
+  63:hdlc.c        **** 	//for (i=0; i <= 3; i++)
+  64:hdlc.c        **** 	//{
+  65:hdlc.c        **** 	//	/* Wait for empty transmit buffer */
+  66:hdlc.c        **** 	//	while ( !( UCSR1A & (1<<UDRE0)) )
+  67:hdlc.c        **** 	//	;
+  68:hdlc.c        **** 	//
+  69:hdlc.c        **** 	//	/* Put data into buffer, sends the data */
+  70:hdlc.c        **** 	//	UDR1 = header[i];
+  71:hdlc.c        **** 	//}
+  72:hdlc.c        **** //
+  73:hdlc.c        **** 	// send data
+ 112               	dMsg, @function
+ 113               	sendMsg:
+ 115 0008 1906      	.LM2:
+ 116 000a 04F0      	.LFBB2:
+ 117 000c 20E0      	/* prologue: function */
+ 118 000e 00C0      	/* frame size = 0 */
+ 119               		movw r20,r24
+ 121 0012 372F      	.LM3:
+ 122 0014 F901      		cp __zero_reg__,r24
+ 123 0016 20E0      		cpc __zero_reg__,r25
+ 124               		brlt .L4
+  74:hdlc.c        **** 
+  75:hdlc.c        **** 	for (i=0; i < size; i++)
+  76:hdlc.c        **** 	{	
+  77:hdlc.c        **** 	//	/* Put data into buffer, sends the data */
+  78:hdlc.c        **** ////
+  79:hdlc.c        **** 	//	UDR1 = *(msg.data_ptr);
+  80:hdlc.c        **** 	//	
+  81:hdlc.c        **** 	
+  82:hdlc.c        **** 	// calc chksum, increase data pointer
+ 125               	 __zero_reg__,r24
+ 126               		cpc __zero_reg__,r25
+ 127 0018 8191      		brlt .L4
+ 128 001a 280F      		ldi r18,lo8(0)
+ 129               		rjmp .L5
+ 130               	.L4:
+ 131 001c 8E2F      		mov r18,r22
+ 132 001e 861B      		mov r19,r23
+ 133 0020 90E0      		movw r30,r18
+ 134 0022 8417      		ldi r18,lo8(0)
+ 135 0024 9507      	.L6:
+ 137               	.LM4:
+  83:hdlc.c        **** 		chk += *(data_ptr++);
+  84:hdlc.c        **** 	
+  85:hdlc.c        **** 	
+  86:hdlc.c        **** 	}
+  87:hdlc.c        **** 	
+ 138               	
+ 139               	.L6:
+  88:hdlc.c        **** 	txData[16] = chk;
+  89:hdlc.c        **** 	
+ 141               	,lo8(0)
+ 142               	.L6:
+  90:hdlc.c        **** 	to_tx_mode();
+  91:hdlc.c        **** 	
+  92:hdlc.c        **** 	// message sent
+  93:hdlc.c        **** 
+  94:hdlc.c        **** 	return 1;
+ 144               	,lo8(0)
+ 145               	.L6:
+ 147               	.LM4:
+ 148 0032 0895      		ld r24,Z+
+ 149               		add r18,r24
+ 151               	.LM5:
+ 152               		mov r24,r30
+ 153               		sub r24,r22
+ 154               		ldi r25,lo8(0)
+ 155               		cp r24,r20
+ 156               		cpc r25,r21
+ 157               		brlt .L6
+ 158               	.L5:
+ 160               	.LM6:
+ 161               		sts txData+16,r18
+ 163               	.LM7:
+ 164               		call to_tx_mode
+ 166               	.LM8:
+DEFINED SYMBOLS
+                            *ABS*:00000000 hdlc.c
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:88     .text:00000000 pollMsg
+C:\Users\joakim\AppData\Local\Temp/cc4f1nce.s:105    .text:00000004 sendMsg
+                            *COM*:00000011 txData
+                            *COM*:0000000a rxCommand
+                            *COM*:00000001 pos
+                            *COM*:00000001 msgComplete
+                            *COM*:00000007 rxMsg
+
+UNDEFINED SYMBOLS
+to_tx_mode
+__do_clear_bss

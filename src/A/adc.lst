@@ -1,0 +1,293 @@
+   1               		.file	"adc.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  79               	.global	adc_init
+  81               	adc_init:
+   1:adc.c         **** #include <avr/io.h>
+   2:adc.c         **** #include <stdio.h>
+   3:adc.c         **** 
+   4:adc.c         **** /********************************************************/
+   5:adc.c         **** /* Init ADC :											*/	
+   6:adc.c         **** /* Internal Aref, leftshift result 						*/
+   7:adc.c         **** /* ADC enable, CLK/4 = sampleClk = 1.000/4 MHz 			*/
+   8:adc.c         **** /********************************************************/
+   9:adc.c         **** void adc_init(void)
+  10:adc.c         **** {
+  82               	= 0 */
+  84               	.LM1:
+  85               		ldi r24,lo8(32)
+  86               		sts 124,r24
+  11:adc.c         **** 	//ADMUX = (REFS1 | REFS0 | ADLAR);				
+  12:adc.c         **** 	ADMUX = 1<<ADLAR; // REFS(1:0) = 00: Vref external
+  87               	)",36,0,0,adc_init
+  88               	.global	adc_init
+  90 0002 8093 7C00 	adc_init:
+  13:adc.c         **** 	ADCSRA = (1<<ADEN | 1<<ADPS1); // ADPS(2:0) = 010: prescaler div by 4 	 
+  91               	(0,1),32,16;len:(0,1),48,16;put:(6,3)=*(6,4)=f(0,1),64,16;get:(6,5)=*(6,6)=f(0,1),80,16;udata:(7,2)
+  94 0008 8093 7A00 	.global	adc_init
+  14:adc.c         **** }
+  96               	,24,8;size:(0,1),32,16;len:(0,1),48,16;put:(6,3)=*(6,4)=f(0,1),64,16;get:(6,5)=*(6,6)=f(0,1),80,16;
+  99               	.global	adc_init
+ 101               	adc_init:
+ 103 0000 4825 693D 	.LM0:
+ 103      2025 7520 
+ 103      2020 00
+ 104               	.LFBB1:
+ 105               	/* prologue: function */
+ 106               	/* frame size = 0 */
+ 108               	.LM1:
+  15:adc.c         **** 
+  16:adc.c         **** 
+  17:adc.c         **** /* ****************************************************************
+  18:adc.c         **** *
+  19:adc.c         **** * Name			: read_adc
+  20:adc.c         **** *
+  21:adc.c         **** * Function		: reads a filtered sample from ADC
+  22:adc.c         **** *
+  23:adc.c         **** * Parameters	: unsigned char channel, selected analog channel
+  24:adc.c         **** *
+  25:adc.c         **** * Returns		: unsigned char sample,	highest 8 bit of the 10 bit sample
+  26:adc.c         **** *
+  27:adc.c         **** * Checked		:
+  28:adc.c         **** *
+  29:adc.c         **** * Requirements	:
+  30:adc.c         **** *
+  31:adc.c         **** * Description	: This function reads the ADC's selected analog input
+  32:adc.c         **** *						three times and returns the sorted middle sample
+  33:adc.c         **** ***************************************************************** */
+  34:adc.c         **** unsigned char read_adc(void)
+  35:adc.c         **** {
+ 109               	2,0,0,0
+ 111               	.global	adc_init
+ 113 0010 9F92      	adc_init:
+ 115 0014 BF92      	.LM0:
+ 116 0016 CF92      	.LFBB1:
+ 117 0018 DF92      	/* prologue: function */
+ 118 001a EF92      	/* frame size = 0 */
+ 120 001e 0F93      	.LM1:
+ 121 0020 1F93      		ldi r24,lo8(32)
+ 122 0022 DF93      		sts 124,r24
+ 124 0026 00D0      	.LM2:
+ 125 0028 0F92      		ldi r24,lo8(-126)
+ 126 002a CDB7      		sts 122,r24
+ 127 002c DEB7      	/* epilogue start */
+ 129               	.LM3:
+  36:adc.c         **** /* TODO, some kind of monitoring to recover from selflock */
+  37:adc.c         **** 
+  38:adc.c         ****    unsigned char i = 0, tmp = 0, highbyte[3], replaced, channel;
+  39:adc.c         ****    
+  40:adc.c         ****    channel = 7; // set this fixed to channel 7 here
+  41:adc.c         **** 	
+  42:adc.c         **** 	tmp = 0x1F & channel;
+  43:adc.c         **** 	ADMUX = ADMUX & 0xE0;			/* Clear select-bits for analog input */
+ 130               	function */
+ 131               	/* frame size = 0 */
+ 133 0030 F0E0      	.LM1:
+ 134 0032 8081      		ldi r24,lo8(32)
+ 135 0034 807E      		sts 124,r24
+  44:adc.c         **** 	ADMUX = ADMUX | tmp;
+ 137               	c_init
+ 139 0038 8081      	adc_init:
+ 141 003c 8083      	.LM0:
+ 142 003e 00E0      	.LFBB1:
+ 143 0040 10E0      	/* prologue: function */
+  45:adc.c         ****    
+  46:adc.c         ****    while( i < 3)						/* make 3 samples */
+  47:adc.c         ****    {  
+  48:adc.c         **** 
+  49:adc.c         **** 		if((ADCSRA & (1<<ADSC)) == 0 )		/* Test if A/D conversion done */
+ 144               	,6)=f(0,1),80,16;udata:(7,2),96,16;;",128,0,0,0
+ 147 0044 FAE7      	.global	adc_init
+ 149 0048 FF24      	adc_init:
+  50:adc.c         **** 		{
+  51:adc.c         **** 			ADCSRA = (ADCSRA | (1<<ADSC));		/* start AD conversion */
+  52:adc.c         **** 		}
+  53:adc.c         **** 
+  54:adc.c         ****    
+  55:adc.c         **** 		while((ADCSRA & (1<<ADSC)) != 0);		/* loop until A/D conversion is done */
+  56:adc.c         **** 
+  57:adc.c         **** 		highbyte[i] = ADCH;					/* read high byte of sample */
+ 151               	ut:(6,3)=*(6,4)=f(0,1),64,16;get:(6,5)=*(6,6)=f(0,1),80,16;udata:(7,2),96,16;;",128,0,0,0
+ 154 004e F9E7      	.global	adc_init
+ 156 0052 9924      	adc_init:
+ 158 0056 5E01      	.LM0:
+ 159 0058 0894      	.LFBB1:
+ 160 005a A11C      	/* prologue: function */
+ 161 005c B11C      	/* frame size = 0 */
+  58:adc.c         **** 		
+  59:adc.c         **** 		printf("H%i= %u   ", i, highbyte[i]); 
+ 162               	:(7,2),96,16;;",128,0,0,0
+ 165 0060 F0E0      	.global	adc_init
+ 167 0064 F0E0      	adc_init:
+ 169 0068 F02D      	.LM0:
+ 170               	.LFBB1:
+ 171               	/* prologue: function */
+ 172               	/* frame size = 0 */
+ 174 006c 8081      	.LM1:
+ 175 006e 86FD      		ldi r24,lo8(32)
+ 176 0070 00C0      		sts 124,r24
+ 178               	.LM2:
+ 179 0072 8081      		ldi r24,lo8(-126)
+ 180 0074 8064      		sts 122,r24
+ 181 0076 8083      	/* epilogue start */
+ 183               	.LM3:
+ 184               		ret
+ 186 007a 8081      	.Lscope1:
+ 187 007c 86FD      		.data
+ 188 007e 00C0      	.LC0:
+ 189               		.string	"H%i= %u   "
+ 190               		.text
+ 192 0082 8081      	.global	read_adc
+ 194 0086 E00F      	read_adc:
+ 196 008a 8083      	.LM4:
+ 197               	.LFBB2:
+ 198               		push r8
+ 199 008c 00D0      		push r9
+ 200 008e 00D0      		push r10
+ 201 0090 00D0      		push r11
+ 202 0092 EDB7      		push r12
+ 203 0094 FEB7      		push r13
+ 204 0096 3196      		push r14
+ 205 0098 D182      		push r15
+ 206 009a C082      		push r16
+ 207 009c 1383      		push r17
+ 208 009e 0283      		push r29
+ 209 00a0 8483      		push r28
+ 210 00a2 1582      		rcall .
+ 211 00a4 0E94 0000 		push __tmp_reg__
+ 212 00a8 0F5F      		in r28,__SP_L__
+ 213 00aa 1F4F      		in r29,__SP_H__
+ 214               	/* prologue: function */
+ 215               	/* frame size = 3 */
+ 217 00ae 9EB7      	.LM5:
+ 218 00b0 0696      		ldi r30,lo8(124)
+ 219 00b2 0FB6      		ldi r31,hi8(124)
+ 220 00b4 F894      		ld r24,Z
+ 221 00b6 9EBF      		andi r24,lo8(-32)
+ 222 00b8 0FBE      		st Z,r24
+ 224 00bc 0330      	.LM6:
+ 225 00be 1105      		ld r24,Z
+ 226 00c0 01F4      		ori r24,lo8(7)
+ 227 00c2 20E0      		st Z,r24
+ 228 00c4 30E0      		ldi r16,lo8(0)
+  60:adc.c         **** 		i++;      
+  61:adc.c         ****    }							/* while i < 3 */    
+  62:adc.c         **** 
+  63:adc.c         **** 
+  64:adc.c         ****    do							/* bubblesort samples, simple filter to remove extrems */
+  65:adc.c         ****    {
+  66:adc.c         ****       replaced = 0;
+  67:adc.c         ****       for(i = 0; i < 2; i++)
+  68:adc.c         ****       {
+  69:adc.c         ****          if (highbyte[i] > highbyte[i+1])
+ 229               	LFBB2
+ 230               	.LM5:
+ 231 00c6 DE01      		ldi r30,lo8(124)
+ 232 00c8 1196      		ldi r31,hi8(124)
+  70:adc.c         ****          {
+  71:adc.c         ****             tmp = highbyte[i];
+  72:adc.c         ****             highbyte[i] = highbyte[i+1];
+  73:adc.c         ****             highbyte[i+1] = tmp;
+ 233               	 r28
+ 234               		rcall .
+ 235 00ca 01E0      		push __tmp_reg__
+  74:adc.c         ****             replaced = 1;
+  75:adc.c         ****          }
+  76:adc.c         ****       }
+  77:adc.c         ****    }
+  78:adc.c         ****    while (replaced == 1);
+ 236               	c:
+ 238 00cc 10E0      	.LM4:
+ 239 00ce 00C0      	.LFBB2:
+ 240               		push r8
+ 241               		push r9
+ 242               		push r10
+ 243 00d0 822F      		push r11
+ 244 00d2 90E0      		push r12
+ 245 00d4 FD01      		push r13
+ 246 00d6 E80F      		push r14
+ 247 00d8 F91F      		push r15
+ 248 00da 7081      		push r16
+ 249 00dc AC01      		push r17
+ 250 00de 4F5F      		push r29
+ 251 00e0 5F4F      		push r28
+ 252 00e2 FD01      		rcall .
+ 253 00e4 E40F      		push __tmp_reg__
+ 254 00e6 F51F      		in r28,__SP_L__
+ 255 00e8 6081      		in r29,__SP_H__
+ 256 00ea 6717      	/* prologue: function */
+ 257 00ec 00F4      	/* frame size = 3 */
+ 259               	.LM5:
+ 260 00ee FD01      		ldi r30,lo8(124)
+ 261 00f0 E80F      		ldi r31,hi8(124)
+ 262 00f2 F91F      		ld r24,Z
+ 263 00f4 6083      		andi r24,lo8(-32)
+ 264               		st Z,r24
+ 266 00f6 FD01      	.LM6:
+ 267 00f8 E40F      		ld r24,Z
+ 268 00fa F51F      		ori r24,lo8(7)
+ 269 00fc 7083      		st Z,r24
+ 270 00fe 302F      		ldi r16,lo8(0)
+ 271               		ldi r17,hi8(0)
+ 273               	.LM7:
+ 274 0100 2F5F      		mov __tmp_reg__,r31
+ 275               		ldi r31,lo8(122)
+ 276 0102 2230      		mov r14,r31
+ 277 0104 00F0      		clr r15
+ 278               		mov r31,__tmp_reg__
+ 280 0106 3130      	.LM8:
+ 281 0108 01F4      		mov __tmp_reg__,r31
+ 282 010a 212F      		ldi r31,lo8(121)
+ 283 010c 312F      		mov r8,r31
+ 284 010e 00C0      		clr r9
+ 285               		mov r31,__tmp_reg__
+  79:adc.c         ****    
+  80:adc.c         ****    return (highbyte[1]);			/* return median sample */
+  81:adc.c         **** }
+ 286               	
+ 287               		mov r14,r31
+ 288 0110 8A81      		clr r15
+ 289               		mov r31,__tmp_reg__
+ 291 0114 0F90      	.LM8:
+ 292 0116 0F90      		mov __tmp_reg__,r31
+ 293 0118 CF91      		ldi r31,lo8(121)
+ 294 011a DF91      		mov r8,r31
+ 295 011c 1F91      		clr r9
+ 296 011e 0F91      		mov r31,__tmp_reg__
+ 297 0120 FF90      		movw r10,r28
+ 298 0122 EF90      		sec
+ 299 0124 DF90      		adc r10,__zero_reg__
+ 300 0126 CF90      		adc r11,__zero_reg__
+ 302 012a AF90      	.LM9:
+ 303 012c 9F90      		mov __tmp_reg__,r31
+ 304 012e 8F90      		ldi r31,lo8(.LC0)
+ 305 0130 0895      		mov r12,r31
+ 306               		ldi r31,hi8(.LC0)
+ 307               		mov r13,r31
+ 308               		mov r31,__tmp_reg__
+ 309               	.L5:
+ 311               	.LM10:
+ 312               		movw r30,r14
+ 313               		ld r24,Z
+ 314               		sbrc r24,6
+ 315               		rjmp .L11
+DEFINED SYMBOLS
+                            *ABS*:00000000 adc.c
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:81     .text:00000000 adc_init
+C:\Users\joakim\AppData\Local\Temp/ccrtd84e.s:108    .text:0000000e read_adc
+
+UNDEFINED SYMBOLS
+printf
+__do_copy_data

@@ -1,0 +1,466 @@
+   1               		.file	"hdlc.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  86               	.global	__vector_28
+  88               	__vector_28:
+   1:hdlc.c        **** #include <avr/interrupt.h>
+   2:hdlc.c        **** #include "hdlc.h"
+   3:hdlc.c        **** #include "uart.h"
+   4:hdlc.c        **** //#include "globals.h"	
+   5:hdlc.c        **** 
+   6:hdlc.c        **** 
+   7:hdlc.c        **** // serial port 1 (to Aircom) interupt
+   8:hdlc.c        **** ISR(USART1_RX_vect) 
+   9:hdlc.c        **** {
+  89               	sh r0
+  90               		clr __zero_reg__
+  91               		push r24
+  92 0000 1F92      		push r25
+  93 0002 0F92      		push r30
+  94 0004 0FB6      		push r31
+  95 0006 0F92      	/* prologue: Signal */
+  96 0008 1124      	/* frame size = 0 */
+  98 000c 9F93      	.LM1:
+  99 000e EF93      	/* #APP */
+ 100 0010 FF93      	 ;  11 "hdlc.c" 1
+ 101               		cli
+ 102               	 ;  0 "" 2
+  10:hdlc.c        **** 	unsigned char rxByte;
+  11:hdlc.c        **** 	cli();						// disable interrupts
+ 103               	3,.LM2-.LFBB1
+ 104               	.LM2:
+ 105               	/* #NOAPP */
+ 106               		lds r25,206
+ 108               	.LM3:
+  12:hdlc.c        **** 
+  13:hdlc.c        **** 		rxByte = UDR1;
+ 109               	25,lo8(126)
+ 110               		brne .L2
+ 112 0014 9091 CE00 	.LM4:
+  14:hdlc.c        **** 		
+  15:hdlc.c        **** 		if (rxByte == 0x7E)
+ 113               	 pos,__zero_reg__
+ 114               		rjmp .L3
+ 115 0018 9E37      	.L2:
+  16:hdlc.c        **** 			pos = 0;
+ 117               	:
+ 118               		cpi r25,lo8(125)
+ 119 001c 1092 0000 		brne .L4
+ 121               	.LM6:
+  17:hdlc.c        **** 		else if (rxByte == 0x7D)
+ 122               	r24,lo8(1)
+ 123               		sts msgComplete,r24
+ 124 0022 9D37      		rjmp .L3
+ 125 0024 01F4      	.L4:
+  18:hdlc.c        **** 			msgComplete = 1;
+ 126               	abn	68,0,20,.LM7-.LFBB1
+ 127               	.LM7:
+ 128 0026 81E0      		lds r24,pos
+ 129 0028 8093 0000 		ldi r30,lo8(rxCommand)
+ 130 002c 00C0      		ldi r31,hi8(rxCommand)
+ 131               		add r30,r24
+  19:hdlc.c        **** 		else
+  20:hdlc.c        **** 			rxCommand[pos++] = rxByte;
+ 132               	31,__zero_reg__
+ 133               		st Z,r25
+ 134 002e 8091 0000 		subi r24,lo8(-(1))
+ 135 0032 E0E0      		sts pos,r24
+ 136 0034 F0E0      	.L3:
+ 138 0038 F11D      	.LM8:
+ 139 003a 9083      	/* #APP */
+ 140 003c 8F5F      	 ;  23 "hdlc.c" 1
+ 141 003e 8093 0000 		sei
+ 142               	 ;  0 "" 2
+  21:hdlc.c        **** 
+  22:hdlc.c        **** 
+  23:hdlc.c        **** 	sei();						/* enable interrupts */
+ 143               	 start */
+ 145               	.LM9:
+ 146               	/* #NOAPP */
+ 147 0042 7894      		pop r31
+ 148               		pop r30
+ 149               		pop r25
+  24:hdlc.c        **** }
+ 150               	4
+ 151               		pop r0
+ 152               		out __SREG__,r0
+ 153 0044 FF91      		pop r0
+ 154 0046 EF91      		pop __zero_reg__
+ 155 0048 9F91      		reti
+ 160 0052 1F90      	.Lscope1:
+ 162               	.global	pollMsg
+ 164               	pollMsg:
+ 166               	.LM10:
+ 167               	.LFBB2:
+ 168               	/* prologue: function */
+ 169               	/* frame size = 0 */
+  25:hdlc.c        **** 
+  26:hdlc.c        **** 
+  27:hdlc.c        **** unsigned char pollMsg(void)
+  28:hdlc.c        **** {
+ 171               	tst r24
+ 172               		breq .L7
+ 173               		lds r24,msgComplete
+ 174               		cpi r24,lo8(1)
+ 175               		brne .L7
+  29:hdlc.c        **** 	if (pos > 0 && msgComplete == 1)
+ 176               	bn	68,0,31,.LM12-.LFBB2
+ 177               	.LM12:
+ 178 0056 8091 0000 		ldi r20,lo8(rxMsg+1)
+ 179 005a 8823      		ldi r21,hi8(rxMsg+1)
+ 180 005c 01F0      		ldi r24,lo8(rxCommand)
+ 181 005e 8091 0000 		ldi r25,hi8(rxCommand)
+ 182 0062 8130      		movw r26,r24
+ 183 0064 01F4      		ld r18,X+
+  30:hdlc.c        **** 	{	
+  31:hdlc.c        **** 		rxMsg.devAddr = rxCommand[0];
+ 184               	0,r20
+ 185               		st Z+,r18
+ 187 0068 50E0      	.LM13:
+ 188 006a 80E0      		ld r18,X
+ 189 006c 90E0      		st Z,r18
+ 191 0070 2D91      	.LM14:
+ 192 0072 FA01      		movw r30,r24
+ 193 0074 2193      		ldd r18,Z+2
+  32:hdlc.c        **** 		rxMsg.command = rxCommand[1];
+ 194               	r20
+ 195               		std Z+2,r18
+ 197 0078 2083      	.LM15:
+  33:hdlc.c        **** 		rxMsg.size = rxCommand[2];
+ 198               	w r24,3
+ 199               		std Z+4,r25
+ 200 007a FC01      		std Z+3,r24
+ 202 007e FA01      	.LM16:
+ 203 0080 2283      		subi r18,lo8(-(3))
+  34:hdlc.c        **** 		rxMsg.data_ptr = &rxCommand[3]; // set pointer to rx buffer
+ 204               	+5,r18
+ 205               		ldi r24,lo8(1)
+ 206 0082 0396      		ret
+ 207 0084 9483      	.L7:
+  35:hdlc.c        **** 		rxMsg.chksum = rxMsg.size + 3;
+ 209               	:
+ 210               		ldi r24,lo8(0)
+ 212 008a 2583      	.LM18:
+ 213 008c 81E0      		ret
+ 215               	.Lscope2:
+  36:hdlc.c        **** 		
+  37:hdlc.c        **** 		return 1;
+ 216               		"startTx:F(0,15)",36,0,0,startTx
+ 217               	.global	startTx
+  38:hdlc.c        **** 	}
+  39:hdlc.c        **** 	else
+  40:hdlc.c        **** 		return 0;
+  41:hdlc.c        **** }
+ 219               	rtTx:
+ 221 0092 0895      	.LM19:
+ 222               	.LFBB3:
+ 223               	/* prologue: function */
+ 224               	/* frame size = 0 */
+ 226               	.LM20:
+ 227               		ldi r24,lo8(8)
+  42:hdlc.c        **** 
+  43:hdlc.c        **** void startTx(void)
+  44:hdlc.c        **** {
+ 228               	2,r24
+ 229               	/* epilogue start */
+ 231               	.LM21:
+ 232               		ret
+  45:hdlc.c        **** 	// ASK mode:
+  46:hdlc.c        **** 	// enable Tx by setting CTRL(1:0) = 10
+  47:hdlc.c        **** 	//PORTA = (1 << CTRL_1) | (0 << CTRL_0); 
+  48:hdlc.c        **** 	
+  49:hdlc.c        **** 	
+  50:hdlc.c        **** 	//OOK mode:
+  51:hdlc.c        **** 	// enable Tx by setting CTRL(1:0) = 01
+  52:hdlc.c        **** 	PORTA = (0 << CTRL_1) | (1 << CTRL_0);
+ 233               	e	startTx, .-startTx
+ 234               	.Lscope3:
+ 236 0096 82B9      	.global	stopTx
+  53:hdlc.c        **** 	
+  54:hdlc.c        **** 	//define CTRL_1			PA2
+  55:hdlc.c        **** 	//define CTRL_0			PA3
+  56:hdlc.c        **** 
+  57:hdlc.c        **** 	//PA2 = CTRL_1: always high
+  58:hdlc.c        **** 	//PA3 = CTRL_0: low for ASK Tx
+  59:hdlc.c        **** 
+  60:hdlc.c        **** }
+ 238               	,52,.LM20-.LFBB3
+ 239               	.LM20:
+ 240 0098 0895      		ldi r24,lo8(8)
+ 241               		out 34-32,r24
+ 242               	/* epilogue start */
+ 244               	.LM21:
+ 245               		ret
+  61:hdlc.c        **** 
+  62:hdlc.c        **** void stopTx(void)
+  63:hdlc.c        **** {
+ 247               	
+ 249               	.global	stopTx
+ 251               	stopTx:
+  64:hdlc.c        **** 	// enable Rx by setting CTRL(1:0) = 11
+  65:hdlc.c        **** 	PORTA = (1 << CTRL_1) | (1 << CTRL_0); 
+ 252               	-.LFBB3
+ 253               	.LM20:
+ 254 009a 8CE0      		ldi r24,lo8(8)
+ 255 009c 82B9      		out 34-32,r24
+ 256               	/* epilogue start */
+  66:hdlc.c        **** 	
+  67:hdlc.c        **** }
+ 257               	bn	68,0,60,.LM21-.LFBB3
+ 258               	.LM21:
+ 259 009e 0895      		ret
+ 261               	.Lscope3:
+ 263               	.global	stopTx
+ 265               	stopTx:
+  68:hdlc.c        **** 
+  69:hdlc.c        **** 
+  70:hdlc.c        **** unsigned char sendMsg(msgType msg)
+  71:hdlc.c        **** {
+ 267               	
+ 268               		out 34-32,r24
+ 269               	/* epilogue start */
+ 271 00a2 0F93      	.LM21:
+ 272 00a4 1F93      		ret
+ 274 00a8 CF93      	.Lscope3:
+ 276 00ac DEB7      	.global	stopTx
+ 278 00b0 0FB6      	stopTx:
+ 280 00b4 DEBF      	.LM22:
+ 281 00b6 0FBE      	.LFBB4:
+ 282 00b8 CDBF      	/* prologue: function */
+ 283               	/* frame size = 0 */
+ 285 00ba 2F83      	.LM23:
+ 286 00bc 3887      		ldi r24,lo8(12)
+ 287 00be 4987      		out 34-32,r24
+ 288 00c0 5A87      	/* epilogue start */
+ 290 00c4 7C87      	.LM24:
+ 291 00c6 8D87      		ret
+ 293               	.Lscope4:
+ 296 00cc 152F      	.global	sendMsg
+  72:hdlc.c        **** 	
+  73:hdlc.c        **** 	unsigned char i;
+  74:hdlc.c        **** 	unsigned char header[4];
+  75:hdlc.c        **** 	unsigned char trailer[2];
+  76:hdlc.c        **** 	
+  77:hdlc.c        **** //	header[0] = 0x7E; // Start byte
+  78:hdlc.c        **** //	header[1] = msg.devAddr;
+  79:hdlc.c        **** //	header[2] = msg.command;
+  80:hdlc.c        **** //	header[3] = msg.size;
+  81:hdlc.c        **** 
+  82:hdlc.c        **** 	header[0] = 'h';
+ 297               	dMsg:
+ 299 00ce 88E6      	.LM25:
+ 300 00d0 8983      	.LFBB5:
+  83:hdlc.c        **** 	header[1] = 'e';
+ 301               	:
+ 302               		ret
+ 304 00d4 8A83      	.Lscope4:
+  84:hdlc.c        **** 	header[2] = 'l';
+ 305               	FBB4:
+ 306               	/* prologue: function */
+ 307 00d6 8CE6      	/* frame size = 0 */
+  85:hdlc.c        **** 	header[3] = 'o';
+ 309               	-startTx
+ 310               	.Lscope3:
+ 312 00dc 8C83      	.global	stopTx
+  86:hdlc.c        **** 
+  87:hdlc.c        **** 	
+  88:hdlc.c        **** //	trailer[0] = msg.chksum; 	// update below with correct value
+  89:hdlc.c        **** //	trailer[1] = 0x7D; 			// stop byte
+  90:hdlc.c        **** 	
+  91:hdlc.c        **** 	trailer[0] = 'p'; 	// update below with correct value
+  92:hdlc.c        **** 	trailer[1] = 'p'; 			// stop byte
+  93:hdlc.c        **** 	
+  94:hdlc.c        **** 	startTx();
+ 313               	e size = 0 */
+ 315 00de 0E94 0000 	.LM20:
+ 316 00e2 BE01      		ldi r24,lo8(8)
+ 317 00e4 6F5F      		out 34-32,r24
+ 318 00e6 7F4F      	/* epilogue start */
+  95:hdlc.c        **** 	
+  96:hdlc.c        **** 	// send header
+  97:hdlc.c        **** 	for (i=0; i <= 3; i++)
+  98:hdlc.c        **** 	{
+  99:hdlc.c        **** 		/* Wait for empty transmit buffer */
+ 100:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 319               	n	68,0,60,.LM21-.LFBB3
+ 320               	.LM21:
+ 321 00e8 A8EC      		ret
+ 101:hdlc.c        **** 		;
+ 102:hdlc.c        **** 	
+ 103:hdlc.c        **** 		/* Put data into buffer, sends the data */
+ 104:hdlc.c        **** 		UDR1 = header[i];
+ 323               	8,0,44,.LM19-.LFBB3
+ 324               	.LM19:
+ 325 00ec 4EEC      	.LFBB3:
+ 326 00ee 50E0      	/* prologue: function */
+ 327               	/* frame size = 0 */
+ 329 00f0 9E01      	.LM20:
+ 330 00f2 2B5F      		ldi r24,lo8(8)
+ 331 00f4 3F4F      		out 34-32,r24
+ 332               	/* epilogue start */
+ 334               	.LM21:
+ 335 00f6 8C91      		ret
+ 337 00fa 00C0      	.Lscope3:
+ 339               	.global	stopTx
+ 341 00fe 8191      	stopTx:
+ 343 0102 FA01      	.LM22:
+ 344 0104 8083      	.LFBB4:
+ 345               	/* prologue: function */
+ 346               	/* frame size = 0 */
+ 348 0108 7307      	.LM23:
+ 349 010a 01F4      		ldi r24,lo8(12)
+ 105:hdlc.c        **** 	}
+ 106:hdlc.c        **** 
+ 107:hdlc.c        **** 	// send data
+ 108:hdlc.c        **** 	for (i=0; i < msg.size; i++)
+ 350               	start */
+ 352 010c 1123      	.LM24:
+ 353 010e 01F0      		ret
+ 355 0112 202F      	.Lscope4:
+ 109:hdlc.c        **** 	{
+ 110:hdlc.c        **** 		/* Wait for empty transmit buffer */
+ 111:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 358               	.LFBB4
+ 359               	.LM23:
+ 360 0118 A8EC      		ldi r24,lo8(12)
+ 361 011a B0E0      		out 34-32,r24
+ 112:hdlc.c        **** 		;
+ 113:hdlc.c        **** 	
+ 114:hdlc.c        **** 		/* Put data into buffer, sends the data */
+ 115:hdlc.c        **** 
+ 116:hdlc.c        **** 		UDR1 = *(msg.data_ptr);
+ 362               	",36,0,0,stopTx
+ 363               	.global	stopTx
+ 365 011e 30E0      	stopTx:
+ 367               	.LM22:
+ 368               	.LFBB4:
+ 369 0120 8C91      	/* prologue: function */
+ 370 0122 85FF      	/* frame size = 0 */
+ 372               	.LM23:
+ 373               		ldi r24,lo8(12)
+ 374 0126 FB01      		out 34-32,r24
+ 375 0128 8191      	/* epilogue start */
+ 377 012c F901      	.LM24:
+ 378 012e 8083      		ret
+ 380               	.Lscope4:
+ 383 0134 8117      	.global	sendMsg
+ 385               	sendMsg:
+ 387               	.LM25:
+ 388 0138 80E7      	.LFBB5:
+ 389 013a 8E83      		push r15
+ 117:hdlc.c        **** 		
+ 118:hdlc.c        **** 		// calc chksum, increase data pointer
+ 119:hdlc.c        **** 		msg.chksum += *(msg.data_ptr++);
+ 120:hdlc.c        **** 	}
+ 121:hdlc.c        **** 	
+ 122:hdlc.c        **** //	trailer[0] = msg.chksum;
+ 123:hdlc.c        **** 	trailer[0] = 'p';
+ 390               	ze	stopTx, .-stopTx
+ 391               	.Lscope4:
+ 394 0140 6B5F      	.global	sendMsg
+ 124:hdlc.c        **** 	
+ 125:hdlc.c        **** 	// send trailer
+ 126:hdlc.c        **** 	for (i=0; i < 2; i++)
+ 127:hdlc.c        **** 	{
+ 128:hdlc.c        **** 		/* Wait for empty transmit buffer */
+ 129:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 396               	4
+ 397               	/* epilogue start */
+ 399 0146 B0E0      	.LM24:
+ 130:hdlc.c        **** 		;
+ 131:hdlc.c        **** 	
+ 132:hdlc.c        **** 		/* Put data into buffer, sends the data */
+ 133:hdlc.c        **** 		UDR1 = trailer[i];
+ 400               	Tx:
+ 402 0148 4EEC      	.LM22:
+ 403 014a 50E0      	.LFBB4:
+ 404               	/* prologue: function */
+ 405               	/* frame size = 0 */
+ 407 014e 295F      	.LM23:
+ 408 0150 3F4F      		ldi r24,lo8(12)
+ 409               		out 34-32,r24
+ 410               	/* epilogue start */
+ 412 0152 8C91      	.LM24:
+ 413 0154 85FF      		ret
+ 415               	.Lscope4:
+ 418 015a 8191      	.global	sendMsg
+ 420 015e FA01      	sendMsg:
+ 422               	.LM25:
+ 423               	.LFBB5:
+ 424 0162 6217      		push r15
+ 425 0164 7307      		push r16
+ 426 0166 01F4      		push r17
+ 134:hdlc.c        **** 	}
+ 135:hdlc.c        **** 	
+ 136:hdlc.c        **** 	while ( !( UCSR1A & (1<<UDRE0)) )
+ 427               	scope4:
+ 430 016a F0E0      	.global	sendMsg
+ 432 016c 8081      	sendMsg:
+ 434 0170 00C0      	.LM25:
+ 137:hdlc.c        **** 		;
+ 138:hdlc.c        **** 	delay_us(10);
+ 435               	BB4
+ 436               	.LM24:
+ 437 0172 8AE0      		ret
+ 439 0176 0E94 0000 	.Lscope4:
+ 139:hdlc.c        **** 	
+ 140:hdlc.c        **** 	// message sent
+ 141:hdlc.c        **** 	stopTx();
+ 440               	FBB4:
+ 441               	/* prologue: function */
+ 442 017a 0E94 0000 	/* frame size = 0 */
+ 142:hdlc.c        **** 
+ 143:hdlc.c        **** 	return 1;
+ 144:hdlc.c        **** }
+ 443               	
+ 444               	.LM21:
+ 445 017e 81E0      		ret
+ 447 0180 2D96      	.Lscope3:
+ 449 0184 F894      	.global	stopTx
+ 451 0188 0FBE      	stopTx:
+ 453 018c CF91      	.LM22:
+ 454 018e DF91      	.LFBB4:
+ 455 0190 1F91      	/* prologue: function */
+ 456 0192 0F91      	/* frame size = 0 */
+ 458 0196 0895      	.LM23:
+ 459               		ldi r24,lo8(12)
+ 460               		out 34-32,r24
+ 461               	/* epilogue start */
+ 463               	.LM24:
+ 464               		ret
+ 466               	.Lscope4:
+ 469               	.global	sendMsg
+ 471               	sendMsg:
+ 473               	.LM25:
+ 474               	.LFBB5:
+ 475               		push r15
+ 476               		push r16
+ 477               		push r17
+DEFINED SYMBOLS
+                            *ABS*:00000000 hdlc.c
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:88     .text:00000000 __vector_28
+                            *COM*:00000001 pos
+                            *COM*:00000001 msgComplete
+                            *COM*:0000000a rxCommand
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:170    .text:00000056 pollMsg
+                            *COM*:00000007 rxMsg
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:227    .text:00000094 startTx
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:246    .text:0000009a stopTx
+C:\Users\joakim\AppData\Local\Temp/ccE5VBWi.s:266    .text:000000a0 sendMsg
+                            *COM*:00000003 txData
+
+UNDEFINED SYMBOLS
+delay_us
+__do_clear_bss

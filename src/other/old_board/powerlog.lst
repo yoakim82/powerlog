@@ -1,0 +1,1635 @@
+   1               		.file	"powerlog.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+ 104               	.global	delay_us
+ 106               	delay_us:
+   1:powerlog.c    **** //#define __AVR_ATmega644P__
+   2:powerlog.c    **** 
+   3:powerlog.c    **** #define BAUD_0 9600		
+   4:powerlog.c    **** #define BAUD_RATE_0 F_CPU/16/BAUD_0-1
+   5:powerlog.c    **** 
+   6:powerlog.c    **** #define BAUD_1 115200		
+   7:powerlog.c    **** #define BAUD_RATE_1 F_CPU/16/BAUD_1-1
+   8:powerlog.c    **** 
+   9:powerlog.c    **** 
+  10:powerlog.c    **** #define TIMER_CYCLE_US 1000000/(F_CPU/1024)
+  11:powerlog.c    **** 
+  12:powerlog.c    **** // F_CPU is set to 3 686 400 Hz (in makefile)
+  13:powerlog.c    **** 
+  14:powerlog.c    **** #include <stdlib.h>
+  15:powerlog.c    **** #include <avr/io.h>
+  16:powerlog.c    **** #include <util/delay.h>
+  17:powerlog.c    **** #include <avr/pgmspace.h>
+  18:powerlog.c    **** #include <inttypes.h>
+  19:powerlog.c    **** #include <avr/interrupt.h>
+  20:powerlog.c    **** #include <stdio.h>
+  21:powerlog.c    **** 
+  22:powerlog.c    **** #include "uart.h"
+  23:powerlog.c    **** #include "powerlog.h"
+  24:powerlog.c    **** #include "globals.h"
+  25:powerlog.c    **** 
+  26:powerlog.c    **** 
+  27:powerlog.c    **** #include "adc.h"
+  28:powerlog.c    ****  
+  29:powerlog.c    **** 
+  30:powerlog.c    **** 
+  31:powerlog.c    **** 
+  32:powerlog.c    **** 
+  33:powerlog.c    **** /* WDR() compiles to an assembler instruction. Watch Dog reset */
+  34:powerlog.c    **** #define WDR()  __asm__ __volatile__ ("wdr" ::)
+  35:powerlog.c    **** 
+  36:powerlog.c    **** 
+  37:powerlog.c    **** 
+  38:powerlog.c    **** 
+  39:powerlog.c    **** /*volatile BYTE var = 0x00; 
+  40:powerlog.c    **** volatile BYTE button_detect = 0x00;
+  41:powerlog.c    **** volatile BYTE button_detect_3 = 0x00;
+  42:powerlog.c    **** 
+  43:powerlog.c    **** volatile BYTE timer_tick_detect = 0;
+  44:powerlog.c    **** */
+  45:powerlog.c    **** 
+  46:powerlog.c    **** static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+  47:powerlog.c    **** 
+  48:powerlog.c    **** 
+  49:powerlog.c    **** 
+  50:powerlog.c    **** //General short delays
+  51:powerlog.c    **** //general short delays
+  52:powerlog.c    **** //Uses internal timer do a fairly accurate 1us
+  53:powerlog.c    **** //Because we are using 16MHz and a prescaler of 8 on Timer0, we have to double x
+  54:powerlog.c    **** void delay_us(uint16_t x)
+  55:powerlog.c    **** {
+ 107               	LM0-.LFBB1
+ 108               	.LM0:
+ 109               	.LFBB1:
+ 110 0000 AF92      		push r10
+ 111 0002 BF92      		push r11
+ 112 0004 CF92      		push r12
+ 113 0006 DF92      		push r13
+ 114 0008 EF92      		push r14
+ 115 000a FF92      		push r15
+ 116 000c 0F93      		push r16
+ 117 000e 1F93      		push r17
+ 118               	/* prologue: function */
+ 119               	/* frame size = 0 */
+  56:powerlog.c    **** 	
+  57:powerlog.c    **** 	_delay_us(x);
+ 120               	57,.LM1-.LFBB1
+ 121               	.LM1:
+ 122 0010 A0E0      		ldi r26,lo8(0)
+ 123 0012 B0E0      		ldi r27,hi8(0)
+ 124 0014 BC01      		movw r22,r24
+ 125 0016 CD01      		movw r24,r26
+ 126 0018 0E94 0000 		call __floatunsisf
+ 127 001c 5B01      		movw r10,r22
+ 128 001e 6C01      		movw r12,r24
+ 129               	.LBB24:
+ 130               	.LBB25:
+ 132               	.Ltext1:
+   1:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    All rights reserved.
+   5:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+   6:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+   9:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    * Redistributions of source code must retain the above copyright
+  10:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  12:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      the documentation and/or other materials provided with the
+  15:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      distribution.
+  16:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  17:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      contributors may be used to endorse or promote products derived
+  19:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****      from this software without specific prior written permission.
+  20:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  21:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  33:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /* $Id: delay.h,v 1.5.2.1 2009/02/25 10:14:03 joerg_wunsch Exp $ */
+  34:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  35:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #ifndef _UTIL_DELAY_H_
+  36:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #define _UTIL_DELAY_H_ 1
+  37:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  38:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #include <inttypes.h>
+  39:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #include <util/delay_basic.h>
+  40:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  41:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /** \file */
+  42:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  43:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     \code
+  44:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  45:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     //#define F_CPU 14.7456E6
+  46:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     #include <util/delay.h>
+  47:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     \endcode
+  48:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  49:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     \note As an alternative method, it is possible to pass the
+  50:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  51:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     Obviously, in that case, no \c \#define statement should be
+  52:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     used.
+  53:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  54:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     The functions in this header file are wrappers around the basic
+  55:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  56:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     convenience functions where actual time values can be specified
+  57:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  58:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     that compile-time constant expressions will be eliminated by
+  59:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     compiler optimization so floating-point expressions can be used
+  60:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  61:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     frequency passed by the macro F_CPU.
+  62:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  63:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     \note In order for these functions to work as intended, compiler
+  64:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  65:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     <em>must</em> be an expression that is a known constant at
+  66:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     compile-time.  If these requirements are not met, the resulting
+  67:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     delay will be much longer (and basically unpredictable), and
+  68:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     applications that otherwise do not use floating-point calculations
+  69:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     will experience severe code bloat by the floating-point library
+  70:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     routines linked into the application.
+  71:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  72:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     The functions available allow the specification of microsecond, and
+  73:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     millisecond delays directly, using the application-supplied macro
+  74:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  75:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  76:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** */
+  77:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  78:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #if !defined(__DOXYGEN__)
+  79:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** static inline void _delay_us(double __us) __attribute__((always_inline));
+  80:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** static inline void _delay_ms(double __ms) __attribute__((always_inline));
+  81:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #endif
+  82:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  83:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #ifndef F_CPU
+  84:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /* prevent compiler error by supplying a default */
+  85:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  86:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** # define F_CPU 1000000UL
+  87:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #endif
+  88:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  89:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #ifndef __OPTIMIZE__
+  90:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+  91:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** #endif
+  92:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  93:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /**
+  94:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    \ingroup util_delay
+  95:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  96:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+  97:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+  98:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+  99:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 100:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 101:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 102:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 103:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    When the user request delay which exceed the maximum possible one,
+ 104:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 105:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 106:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 107:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    user will not be informed about decreased resolution.
+ 108:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****  */
+ 109:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** void
+ 110:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** _delay_ms(double __ms)
+ 111:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** {
+ 112:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	uint16_t __ticks;
+ 113:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	double __tmp = ((F_CPU) / 4e3) * __ms;
+ 114:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	if (__tmp < 1.0)
+ 115:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		__ticks = 1;
+ 116:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	else if (__tmp > 65535)
+ 117:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	{
+ 118:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		//	__ticks = requested delay in 1/10 ms
+ 119:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		__ticks = (uint16_t) (__ms * 10.0);
+ 120:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		while(__ticks)
+ 121:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		{
+ 122:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 			// wait 1/10 ms
+ 123:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 			_delay_loop_2(((F_CPU) / 4e3) / 10);
+ 124:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 			__ticks --;
+ 125:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		}
+ 126:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		return;
+ 127:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	}
+ 128:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	else
+ 129:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		__ticks = (uint16_t)__tmp;
+ 130:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	_delay_loop_2(__ticks);
+ 131:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** }
+ 132:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 133:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** /**
+ 134:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    \ingroup util_delay
+ 135:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 136:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    Perform a delay of \c __us microseconds, using _delay_loop_1().
+ 137:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 138:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+ 139:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 140:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 141:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    The maximal possible delay is 768 us / F_CPU in MHz.
+ 142:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 
+ 143:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    If the user requests a delay greater than the maximal possible one,
+ 144:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    _delay_us() will automatically call _delay_ms() instead.  The user
+ 145:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****    will not be informed about this case.
+ 146:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h ****  */
+ 147:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** void
+ 148:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** _delay_us(double __us)
+ 149:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** {
+ 150:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	uint8_t __ticks;
+ 151:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	double __tmp = ((F_CPU) / 3e6) * __us;
+ 133               	151,.LM2-.LFBB1
+ 134               	.LM2:
+ 135 0020 22E5      		ldi r18,lo8(0x3f9d4952)
+ 136 0022 39E4      		ldi r19,hi8(0x3f9d4952)
+ 137 0024 4DE9      		ldi r20,hlo8(0x3f9d4952)
+ 138 0026 5FE3      		ldi r21,hhi8(0x3f9d4952)
+ 139 0028 0E94 0000 		call __mulsf3
+ 140 002c 7B01      		movw r14,r22
+ 141 002e 8C01      		movw r16,r24
+ 152:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	if (__tmp < 1.0)
+ 142               	8,0,152,.LM3-.LFBB1
+ 143               	.LM3:
+ 144 0030 20E0      		ldi r18,lo8(0x3f800000)
+ 145 0032 30E0      		ldi r19,hi8(0x3f800000)
+ 146 0034 40E8      		ldi r20,hlo8(0x3f800000)
+ 147 0036 5FE3      		ldi r21,hhi8(0x3f800000)
+ 148 0038 0E94 0000 		call __ltsf2
+ 149 003c 8823      		tst r24
+ 150 003e 04F4      		brge .L21
+ 151 0040 61E0      		ldi r22,lo8(1)
+ 152 0042 00C0      		rjmp .L4
+ 153               	.L21:
+ 153:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		__ticks = 1;
+ 154:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	else if (__tmp > 255)
+ 154               	,154,.LM4-.LFBB1
+ 155               	.LM4:
+ 156 0044 C801      		movw r24,r16
+ 157 0046 B701      		movw r22,r14
+ 158 0048 20E0      		ldi r18,lo8(0x437f0000)
+ 159 004a 30E0      		ldi r19,hi8(0x437f0000)
+ 160 004c 4FE7      		ldi r20,hlo8(0x437f0000)
+ 161 004e 53E4      		ldi r21,hhi8(0x437f0000)
+ 162 0050 0E94 0000 		call __gtsf2
+ 163 0054 1816      		cp __zero_reg__,r24
+ 164 0056 04F0      		brlt .+2
+ 165 0058 00C0      		rjmp .L22
+ 155:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	{
+ 156:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		_delay_ms(__us / 1000.0);
+ 166               	,156,.LM5-.LFBB1
+ 167               	.LM5:
+ 168 005a C601      		movw r24,r12
+ 169 005c B501      		movw r22,r10
+ 170 005e 20E0      		ldi r18,lo8(0x447a0000)
+ 171 0060 30E0      		ldi r19,hi8(0x447a0000)
+ 172 0062 4AE7      		ldi r20,hlo8(0x447a0000)
+ 173 0064 54E4      		ldi r21,hhi8(0x447a0000)
+ 174 0066 0E94 0000 		call __divsf3
+ 175 006a 5B01      		movw r10,r22
+ 176 006c 6C01      		movw r12,r24
+ 177               	.LBB26:
+ 178               	.LBB27:
+ 180               	.LM6:
+ 181 006e 26E6      		ldi r18,lo8(0x44666666)
+ 182 0070 36E6      		ldi r19,hi8(0x44666666)
+ 183 0072 46E6      		ldi r20,hlo8(0x44666666)
+ 184 0074 54E4      		ldi r21,hhi8(0x44666666)
+ 185 0076 0E94 0000 		call __mulsf3
+ 186 007a 7B01      		movw r14,r22
+ 187 007c 8C01      		movw r16,r24
+ 189               	.LM7:
+ 190 007e 20E0      		ldi r18,lo8(0x3f800000)
+ 191 0080 30E0      		ldi r19,hi8(0x3f800000)
+ 192 0082 40E8      		ldi r20,hlo8(0x3f800000)
+ 193 0084 5FE3      		ldi r21,hhi8(0x3f800000)
+ 194 0086 0E94 0000 		call __ltsf2
+ 195 008a 8823      		tst r24
+ 196 008c 04F4      		brge .L23
+ 197 008e 61E0      		ldi r22,lo8(1)
+ 198 0090 70E0      		ldi r23,hi8(1)
+ 199 0092 00C0      		rjmp .L9
+ 200               	.L23:
+ 202               	.LM8:
+ 203 0094 C801      		movw r24,r16
+ 204 0096 B701      		movw r22,r14
+ 205 0098 20E0      		ldi r18,lo8(0x477fff00)
+ 206 009a 3FEF      		ldi r19,hi8(0x477fff00)
+ 207 009c 4FE7      		ldi r20,hlo8(0x477fff00)
+ 208 009e 57E4      		ldi r21,hhi8(0x477fff00)
+ 209 00a0 0E94 0000 		call __gtsf2
+ 210 00a4 1816      		cp __zero_reg__,r24
+ 211 00a6 04F4      		brge .L24
+ 213               	.LM9:
+ 214 00a8 C601      		movw r24,r12
+ 215 00aa B501      		movw r22,r10
+ 216 00ac 20E0      		ldi r18,lo8(0x41200000)
+ 217 00ae 30E0      		ldi r19,hi8(0x41200000)
+ 218 00b0 40E2      		ldi r20,hlo8(0x41200000)
+ 219 00b2 51E4      		ldi r21,hhi8(0x41200000)
+ 220 00b4 0E94 0000 		call __mulsf3
+ 221 00b8 0E94 0000 		call __fixunssfsi
+ 222 00bc CB01      		movw r24,r22
+ 224               	.LM10:
+ 225 00be 672B      		or r22,r23
+ 226 00c0 01F0      		breq .L14
+ 227               	.LBB28:
+ 228               	.LBB29:
+ 230               	.Ltext2:
+   1:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    Copyright (c) 2007 Joerg Wunsch
+   3:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    All rights reserved.
+   4:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+   5:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    Redistribution and use in source and binary forms, with or without
+   6:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    modification, are permitted provided that the following conditions are met:
+   7:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+   8:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    * Redistributions of source code must retain the above copyright
+   9:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      notice, this list of conditions and the following disclaimer.
+  10:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  11:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    * Redistributions in binary form must reproduce the above copyright
+  12:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      notice, this list of conditions and the following disclaimer in
+  13:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      the documentation and/or other materials provided with the
+  14:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      distribution.
+  15:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  16:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****    * Neither the name of the copyright holders nor the names of
+  17:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      contributors may be used to endorse or promote products derived
+  18:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****      from this software without specific prior written permission.
+  19:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  20:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  21:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  22:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  23:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  24:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  25:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  26:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  27:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  28:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  29:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  30:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  31:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  32:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /* $Id: delay_basic.h,v 1.1 2007/05/13 21:23:20 joerg_wunsch Exp $ */
+  33:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  34:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** #ifndef _UTIL_DELAY_BASIC_H_
+  35:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** #define _UTIL_DELAY_BASIC_H_ 1
+  36:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  37:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** #include <inttypes.h>
+  38:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  39:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /** \file */
+  40:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /** \defgroup util_delay_basic <util/delay_basic.h>: Basic busy-wait delay loops
+  41:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     \code
+  42:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     #include <util/delay_basic.h>
+  43:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     \endcode
+  44:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  45:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     The functions in this header file implement simple delay loops
+  46:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     that perform a busy-waiting.  They are typically used to
+  47:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     facilitate short delays in the program execution.  They are
+  48:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     implemented as count-down loops with a well-known CPU cycle
+  49:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     count per loop iteration.  As such, no other processing can
+  50:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     occur simultaneously.  It should be kept in mind that the
+  51:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     functions described here do not disable interrupts.
+  52:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  53:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     In general, for long delays, the use of hardware timers is
+  54:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     much preferrable, as they free the CPU, and allow for
+  55:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     concurrent processing of other events while the timer is
+  56:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     running.  However, in particular for very short delays, the
+  57:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     overhead of setting up a hardware timer is too much compared
+  58:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     to the overall delay time.
+  59:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  60:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     Two inline functions are provided for the actual delay algorithms.
+  61:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  62:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** */
+  63:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  64:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** #if !defined(__DOXYGEN__)
+  65:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** static inline void _delay_loop_1(uint8_t __count) __attribute__((always_inline));
+  66:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** static inline void _delay_loop_2(uint16_t __count) __attribute__((always_inline));
+  67:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** #endif
+  68:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  69:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /** \ingroup util_delay_basic
+  70:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  71:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     Delay loop using an 8-bit counter \c __count, so up to 256
+  72:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     iterations are possible.  (The value 256 would have to be passed
+  73:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     as 0.)  The loop executes three CPU cycles per iteration, not
+  74:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     including the overhead the compiler needs to setup the counter
+  75:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     register.
+  76:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  77:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     Thus, at a CPU speed of 1 MHz, delays of up to 768 microseconds
+  78:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     can be achieved.
+  79:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** */
+  80:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** void
+  81:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** _delay_loop_1(uint8_t __count)
+  82:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** {
+  83:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 	__asm__ volatile (
+  84:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 		"1: dec %0" "\n\t"
+  85:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 		"brne 1b"
+  86:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 		: "=r" (__count)
+  87:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 		: "0" (__count)
+  88:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 	);
+  89:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** }
+  90:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  91:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** /** \ingroup util_delay_basic
+  92:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  93:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     Delay loop using a 16-bit counter \c __count, so up to 65536
+  94:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     iterations are possible.  (The value 65536 would have to be
+  95:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     passed as 0.)  The loop executes four CPU cycles per iteration,
+  96:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     not including the overhead the compiler requires to setup the
+  97:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     counter register pair.
+  98:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 
+  99:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     Thus, at a CPU speed of 1 MHz, delays of up to about 262.1
+ 100:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****     milliseconds can be achieved.
+ 101:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h ****  */
+ 102:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** void
+ 103:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** _delay_loop_2(uint16_t __count)
+ 104:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** {
+ 105:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h **** 	__asm__ volatile (
+ 231               	8(92)
+ 232               	.L19:
+ 233 00c2 2CE5      		movw r30,r18
+ 234 00c4 30E0      	/* #APP */
+ 235               	 ;  105 "c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h" 1
+ 236 00c6 F901      		1: sbiw r30,1
+ 237               		brne 1b
+ 238               	 ;  0 "" 2
+ 239 00c8 3197      	/* #NOAPP */
+ 240 00ca 01F4      	.LBE29:
+ 241               	.LBE28:
+ 243               	.Ltext3:
+ 245               	.LM12:
+ 246               		sbiw r24,1
+ 248               	.LM13:
+ 249 00cc 0197      		brne .L19
+ 250               		rjmp .L14
+ 251               	.L24:
+ 253 00d0 00C0      	.LM14:
+ 254               		movw r24,r16
+ 255               		movw r22,r14
+ 256               		call __fixunssfsi
+ 257 00d2 C801      	.L9:
+ 258 00d4 B701      	.LBB30:
+ 259 00d6 0E94 0000 	.LBB31:
+ 261               	.Ltext4:
+ 263               	.LM15:
+ 264               		movw r24,r22
+ 265               	/* #APP */
+ 266               	 ;  105 "c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h" 1
+ 267 00da CB01      		1: sbiw r24,1
+ 268               		brne 1b
+ 269               	 ;  0 "" 2
+ 270 00dc 0197      	/* #NOAPP */
+ 271 00de 01F4      		rjmp .L14
+ 272               	.L22:
+ 273               	.LBE31:
+ 274 00e0 00C0      	.LBE30:
+ 275               	.LBE27:
+ 276               	.LBE26:
+ 278               	.Ltext5:
+ 280               	.LM16:
+ 281               		movw r24,r16
+ 157:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		return;
+ 158:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	}
+ 159:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 	else
+ 160:c:/winavr-20090313/lib/gcc/../../avr/include/util/delay.h **** 		__ticks = (uint8_t)__tmp;
+ 282               	3:
+ 284 00e2 C801      	.Ltext6:
+ 286 00e6 0E94 0000 	.LM17:
+ 287               	/* #APP */
+ 288               	 ;  83 "c:/winavr-20090313/lib/gcc/../../avr/include/util/delay_basic.h" 1
+ 289               		1: dec r22
+ 290               		brne 1b
+ 291               	 ;  0 "" 2
+ 292               	/* #NOAPP */
+ 293               	.L14:
+ 294               	/* epilogue start */
+ 295               	.LBE33:
+ 296 00ea 6A95      	.LBE32:
+ 297 00ec 01F4      	.LBE25:
+ 298               	.LBE24:
+ 300               	.Ltext7:
+ 302               	.LM18:
+ 303               		pop r17
+ 304               		pop r16
+ 305               		pop r15
+ 306               		pop r14
+ 307               		pop r13
+  58:powerlog.c    **** 	//while(x > 256)
+  59:powerlog.c    **** 	//{
+  60:powerlog.c    **** 	//	TIFR0 = (1<<TOV0); //Clear any interrupt flags on Timer0
+  61:powerlog.c    **** 	//	TCNT0 = 0; //Preload Timer0 for 256 clicks. Should be 1us per click
+  62:powerlog.c    **** 	//	while( (TIFR0 & (1<<TOV0)) == 0);
+  63:powerlog.c    **** 	//	
+  64:powerlog.c    **** 	//	x -= 256;
+  65:powerlog.c    **** 	//}
+  66:powerlog.c    **** 
+  67:powerlog.c    **** 	//TIFR0 = (1<<TOV0); //Clear any interrupt flags on Timer0
+  68:powerlog.c    **** 	//TCNT0 = 256 - x; //256 - 125 = 131 : Preload Timer0 for x clicks. Should be 1us per click
+  69:powerlog.c    **** 	//while( (TIFR0 & (1<<TOV0)) == 0);
+  70:powerlog.c    **** }
+ 308               	
+ 309               		ret
+ 328               	.Lscope1:
+ 330               	.global	delay_ms
+ 332               	delay_ms:
+ 334               	.LM19:
+ 335               	.LFBB2:
+ 336               		push r28
+ 337               		push r29
+ 338               	/* prologue: function */
+ 339               	/* frame size = 0 */
+ 340               	.LBB34:
+  71:powerlog.c    **** 
+  72:powerlog.c    **** 
+  73:powerlog.c    **** void delay_ms(uint16_t x)
+  74:powerlog.c    **** {
+ 342               	eg__,r28
+ 343               		cpc __zero_reg__,r29
+ 344               		brge .L28
+ 345 0100 CF93      	.L29:
+ 347               	.LM21:
+ 348               		ldi r24,lo8(1000)
+ 349               		ldi r25,hi8(1000)
+  75:powerlog.c    **** 	
+  76:powerlog.c    **** 	for (int i = x; i > 0; i--)
+ 350               	lay_us
+ 352 0104 EC01      	.LM22:
+ 353 0106 1C16      		sbiw r28,1
+ 354 0108 1D06      		cp __zero_reg__,r28
+ 355 010a 04F4      		cpc __zero_reg__,r29
+ 356               		brlt .L29
+  77:powerlog.c    **** 		delay_us(1000);
+ 357               	* epilogue start */
+ 358               	.LBE34:
+ 360 010e 93E0      	.LM23:
+ 361 0110 0E94 0000 		pop r29
+ 362               		pop r28
+ 363               		ret
+ 365 0116 1C16      	.Lscope2:
+ 367 011a 04F0      	.global	__vector_3
+ 369               	__vector_3:
+  78:powerlog.c    **** 	//while(x > 256)
+  79:powerlog.c    **** 	//{
+  80:powerlog.c    **** 	//	TIFR0 = (1<<TOV0); //Clear any interrupt flags on Timer0
+  81:powerlog.c    **** 	//	TCNT0 = 0; //Preload Timer0 for 256 clicks. Should be 1us per click
+  82:powerlog.c    **** 	//	while( (TIFR0 & (1<<TOV0)) == 0);
+  83:powerlog.c    **** 	//	
+  84:powerlog.c    **** 	//	x -= 256;
+  85:powerlog.c    **** 	//}
+  86:powerlog.c    **** 
+  87:powerlog.c    **** 	//TIFR0 = (1<<TOV0); //Clear any interrupt flags on Timer0
+  88:powerlog.c    **** 	//TCNT0 = 256 - x; //256 - 125 = 131 : Preload Timer0 for x clicks. Should be 1us per click
+  89:powerlog.c    **** 	//while( (TIFR0 & (1<<TOV0)) == 0);
+  90:powerlog.c    **** }
+ 371               	
+ 372               		push __zero_reg__
+ 373 011c DF91      		push r0
+ 374 011e CF91      		in r0,__SREG__
+ 375 0120 0895      		push r0
+ 376               		clr __zero_reg__
+ 377               		push r18
+ 378               		push r19
+ 379               		push r20
+ 380               		push r21
+ 381               		push r22
+  91:powerlog.c    **** 
+  92:powerlog.c    **** 
+  93:powerlog.c    **** 
+  94:powerlog.c    **** /* **************************************************************
+  95:powerlog.c    **** *
+  96:powerlog.c    **** * Name			: ioinit
+  97:powerlog.c    **** *
+  98:powerlog.c    **** * Function		: Setup the hardware
+  99:powerlog.c    **** *
+ 100:powerlog.c    **** * Parameters	: void
+ 101:powerlog.c    **** *
+ 102:powerlog.c    **** * Returns		: void
+ 103:powerlog.c    **** *
+ 104:powerlog.c    **** * Checked		:
+ 105:powerlog.c    **** *
+ 106:powerlog.c    **** * Requirements	:
+ 107:powerlog.c    **** *
+ 108:powerlog.c    **** ***************************************************************** */
+ 109:powerlog.c    **** 
+ 110:powerlog.c    **** unsigned char ioinit(void)
+ 111:powerlog.c    **** {
+ 112:powerlog.c    ****   	/********************************************************/
+ 113:powerlog.c    **** 	/* PORTA : 	ADC7 configured as input		 			*/
+ 114:powerlog.c    **** 	/********************************************************/
+ 115:powerlog.c    **** 	DDRA = 0x7F; //0111 1111
+ 116:powerlog.c    **** 
+ 117:powerlog.c    **** 	// note: Display uses pins 6:0 on this port (outputs).
+ 118:powerlog.c    **** 	//       pin ADC7 is for converting Vref (input)
+ 119:powerlog.c    **** 	
+ 120:powerlog.c    **** 	/********************************************************/
+ 121:powerlog.c    **** 	/* Disable pullup resistors on PORTA 					*/
+ 122:powerlog.c    **** 	/********************************************************/
+ 123:powerlog.c    **** 	PORTA = 0x00;	
+ 124:powerlog.c    **** 	
+ 125:powerlog.c    **** 	/********************************************************/
+ 126:powerlog.c    **** 	/* PORTB : 	0=led_on, output				 			*/
+ 127:powerlog.c    **** 	/*			1=Timer 1 clock input (T1)			 		*/
+ 128:powerlog.c    **** 	/*			2=INT2, sensor_n, input						*/
+ 129:powerlog.c    **** 	/*			3=not in use, default input 				*/
+ 130:powerlog.c    **** 	/*			4=one_wire_data, input	 					*/
+ 131:powerlog.c    **** 	/*			5=not in use, input 						*/
+ 132:powerlog.c    **** 	/*			6=not in use, input 						*/
+ 133:powerlog.c    **** 	/*			7=not in use, input 						*/
+ 134:powerlog.c    **** 	/********************************************************/
+ 135:powerlog.c    **** 	DDRB = 0x01; // HIGH = output...			
+ 136:powerlog.c    **** 	
+ 137:powerlog.c    **** 	/********************************************************/
+ 138:powerlog.c    **** 	/* Disable pullup resistors on PORTB 					*/
+ 139:powerlog.c    **** 	/********************************************************/
+ 140:powerlog.c    **** 	PORTB = 0x00;	 // led = off (0)
+ 141:powerlog.c    **** 	
+ 142:powerlog.c    **** 	/********************************************************/
+ 143:powerlog.c    **** 	/* PORTC : 	0=I2C SCL									*/
+ 144:powerlog.c    **** 	/*			1=I2C SDA									*/
+ 145:powerlog.c    **** 	/*			2=Not in use								*/
+ 146:powerlog.c    **** 	/*			3=Not in use								*/
+ 147:powerlog.c    **** 	/*			4=Not in use								*/
+ 148:powerlog.c    **** 	/*			5=not in use, input							*/
+ 149:powerlog.c    **** 	/*			6=not in use, input							*/
+ 150:powerlog.c    **** 	/*			7=not in use, input							*/
+ 151:powerlog.c    **** 	/********************************************************/
+ 152:powerlog.c    **** 	DDRC = 0x00;				
+ 153:powerlog.c    **** 	
+ 154:powerlog.c    **** 	/********************************************************/
+ 155:powerlog.c    **** 	/* Disable pullup resistors on PORTC 					*/
+ 156:powerlog.c    **** 	/* DISP_RESET default inactive							*/
+ 157:powerlog.c    **** 	/* HB_LED default inactive								*/
+ 158:powerlog.c    **** 	/********************************************************/
+ 159:powerlog.c    **** 	PORTC = 0x00;	
+ 160:powerlog.c    **** 
+ 161:powerlog.c    **** 
+ 162:powerlog.c    **** 	/********************************************************/
+ 163:powerlog.c    **** 	/* PORTD : 	0=UART_RXD default input 					*/
+ 164:powerlog.c    **** 	/*		 	1=UART_TXD default output 					*/
+ 165:powerlog.c    **** 	/*			2=INT0 input 								*/
+ 166:powerlog.c    **** 	/*			3=unused input 								*/
+ 167:powerlog.c    **** 	/*			4=unused input								*/
+ 168:powerlog.c    **** 	/*			5=unused input								*/
+ 169:powerlog.c    **** 	/*			6=unused input								*/
+ 170:powerlog.c    **** 	/*			7=unused input								*/
+ 171:powerlog.c    **** 	/********************************************************/
+ 172:powerlog.c    **** 	DDRD = 0x02;
+ 173:powerlog.c    **** 	
+ 174:powerlog.c    **** 	/********************************************************/
+ 175:powerlog.c    **** 	/* Configure pullup resistors on PORTD 					*/
+ 176:powerlog.c    **** 	/* UART_RXD inactive									*/
+ 177:powerlog.c    **** 	/* UART_TXD inactive 									*/
+ 178:powerlog.c    **** 	/* Remaining [7:2] inactive								*/
+ 179:powerlog.c    **** 	/********************************************************/
+ 180:powerlog.c    **** 	PORTD = 0x00;	
+ 181:powerlog.c    **** 
+ 182:powerlog.c    **** 	/********************************************************/
+ 183:powerlog.c    **** 	/* Configure external IRQ inputs						*/
+ 184:powerlog.c    **** 	/********************************************************/
+ 185:powerlog.c    **** 	
+ 186:powerlog.c    **** 	// disable interrupt on INT2
+ 187:powerlog.c    **** 	EIMSK = 0;
+ 188:powerlog.c    **** 	
+ 189:powerlog.c    **** 	// select falling edge for interrupt on INT2
+ 190:powerlog.c    **** 	EICRA = (10<<ISC20); // (00<<ÍSC20); // low level interrupt on INT2
+ 191:powerlog.c    **** 
+ 192:powerlog.c    **** 	
+ 193:powerlog.c    **** 	// clear interrupt flags
+ 194:powerlog.c    **** 	EIFR = (1<<INTF2) | (1<<INTF1) | (1<<INTF0);
+ 195:powerlog.c    **** 	
+ 196:powerlog.c    **** 	// enable external interrupt on INT2 only
+ 197:powerlog.c    **** 	EIMSK = (1<<INT2);
+ 198:powerlog.c    **** 	
+ 199:powerlog.c    **** 	
+ 200:powerlog.c    **** 	/********************************************************/
+ 201:powerlog.c    **** 	/* Configure external pin change interrupts (PCINT)		*/
+ 202:powerlog.c    **** 	
+ 203:powerlog.c    **** 	PCMSK3 = 0;
+ 204:powerlog.c    **** 	PCMSK2 = 0;
+ 205:powerlog.c    **** 	PCMSK1 = 0;
+ 206:powerlog.c    **** 	PCMSK0 = 0;
+ 207:powerlog.c    **** 	
+ 208:powerlog.c    **** 	PCICR = 0;
+ 209:powerlog.c    **** 	
+ 210:powerlog.c    **** 	
+ 211:powerlog.c    **** 	
+ 212:powerlog.c    **** 	/********************************************************/
+ 213:powerlog.c    **** 	/* Configure and enable timer :							*/
+ 214:powerlog.c    **** 	/* System clock Prescaler is set to OSC / 8             */
+ 215:powerlog.c    **** 	/* Timer Prescaler CLK/1024	=> 976,5625 Hz @ 1 MHz CLK	*/
+ 216:powerlog.c    **** 	/* Normal mode 											*/
+ 217:powerlog.c    **** 	/********************************************************/
+ 218:powerlog.c    **** 	TCCR1A = 0x00;														  
+ 219:powerlog.c    **** 	//TCCR1B = 7<<CS10; // Tin clock source
+ 220:powerlog.c    **** 	TCCR1B = 5<<CS10; // clkIO / 1024 clock source
+ 221:powerlog.c    **** 										
+ 222:powerlog.c    **** 	OCR1A = 0;    												 
+ 223:powerlog.c    **** 	//DDRB = 1<<DDRB | 1<<PB1 | 1<<PB4 | 1<<PB5;   			
+ 224:powerlog.c    **** 	//TIMSK1 = 1<<TOIE1;	
+ 225:powerlog.c    **** 
+ 226:powerlog.c    **** 	//Init timer 0 for delay_us timing
+ 227:powerlog.c    **** 	//8,000,000 / 8 = 1,000,000
+ 228:powerlog.c    ****     //TCCR0B = (1<<CS01); //Set Prescaler to 8. CS01=1
+ 229:powerlog.c    **** 
+ 230:powerlog.c    **** 
+ 231:powerlog.c    **** 	PRR = 0;
+ 232:powerlog.c    **** 
+ 233:powerlog.c    **** 
+ 234:powerlog.c    **** 										 
+ 235:powerlog.c    **** 
+ 236:powerlog.c    **** 	/********************************************************/
+ 237:powerlog.c    **** 	/* Init UART  											*/	
+ 238:powerlog.c    **** 	/********************************************************/
+ 239:powerlog.c    **** 	stdout = &mystdout; //Required for printf init
+ 240:powerlog.c    **** 	
+ 241:powerlog.c    **** 	uart_init(BAUD_RATE_0); // set up printf uart for 9600 bps
+ 242:powerlog.c    **** 	
+ 243:powerlog.c    **** 	uart1_init(BAUD_RATE_1); // set up hdlc uart for 115200 bps
+ 244:powerlog.c    **** 
+ 245:powerlog.c    **** 	
+ 246:powerlog.c    **** 	/********************************************************/
+ 247:powerlog.c    **** 	/* enable interrupts :  clear the global interupt mask	*/
+ 248:powerlog.c    **** 	/********************************************************/	
+ 249:powerlog.c    ****     sei ();    			 
+ 250:powerlog.c    **** 	
+ 251:powerlog.c    **** 	return(TRUE);
+ 252:powerlog.c    **** }
+ 253:powerlog.c    **** 
+ 254:powerlog.c    **** 
+ 255:powerlog.c    **** 
+ 256:powerlog.c    **** 
+ 257:powerlog.c    **** 
+ 258:powerlog.c    **** /* ****************************************************************
+ 259:powerlog.c    **** *
+ 260:powerlog.c    **** * Name			: SIG_OVERFLOW1
+ 261:powerlog.c    **** *
+ 262:powerlog.c    **** * Function		: Timer_1 owerflow Interupt routine
+ 263:powerlog.c    **** *
+ 264:powerlog.c    **** * Parameters	: void
+ 265:powerlog.c    **** *
+ 266:powerlog.c    **** * Returns		: void
+ 267:powerlog.c    **** *
+ 268:powerlog.c    **** * Modify		: Global: IRQ_done
+ 269:powerlog.c    **** *
+ 270:powerlog.c    **** * Checked		:
+ 271:powerlog.c    **** *
+ 272:powerlog.c    **** * Requirements	:
+ 273:powerlog.c    **** * Description	: Reads the contrast and brightness controls and write to OLED
+ 274:powerlog.c    **** *				  and DA - converter trough i2C bus.
+ 275:powerlog.c    **** *
+ 276:powerlog.c    **** ***************************************************************** */
+ 277:powerlog.c    **** SIGNAL(SIG_OVERFLOW1)
+ 278:powerlog.c    **** {
+ 279:powerlog.c    **** 	cli();						/* disable interrupts, no interupt during I2C bus transfer */
+ 280:powerlog.c    **** 
+ 281:powerlog.c    **** 	timer_of++;
+ 282:powerlog.c    **** 	TCNT1 = 0;
+ 283:powerlog.c    **** 	printf("Timer overflow number %i\n\r", timer_of);
+ 284:powerlog.c    **** 
+ 285:powerlog.c    **** 	sei();						/* enable interrupts */
+ 286:powerlog.c    **** }
+ 287:powerlog.c    **** 
+ 288:powerlog.c    **** /* ****************************************************************
+ 289:powerlog.c    **** *
+ 290:powerlog.c    **** * Name			: SIG_INTERUPT0
+ 291:powerlog.c    **** *
+ 292:powerlog.c    **** * Function		: Extern interupt on PORTD[2]
+ 293:powerlog.c    **** *
+ 294:powerlog.c    **** * Parameters	: void
+ 295:powerlog.c    **** *
+ 296:powerlog.c    **** * Returns		: void
+ 297:powerlog.c    **** *
+ 298:powerlog.c    **** * Checked		:
+ 299:powerlog.c    **** *
+ 300:powerlog.c    **** * Requirements	:
+ 301:powerlog.c    **** * Description	: IR Sensor input (active low about 1,6 ms)
+ 302:powerlog.c    **** *
+ 303:powerlog.c    **** ***************************************************************** */
+ 304:powerlog.c    **** ISR(SIG_INTERRUPT2)
+ 305:powerlog.c    **** {
+ 382               		push r24
+ 383               		push r25
+ 384               		push r26
+ 385 0122 1F92      		push r27
+ 386 0124 0F92      		push r30
+ 387 0126 0FB6      		push r31
+ 388 0128 0F92      	/* prologue: Signal */
+ 389 012a 1124      	/* frame size = 0 */
+ 391 012e 3F93      	.LM25:
+ 392 0130 4F93      	/* #APP */
+ 393 0132 5F93      	 ;  310 "powerlog.c" 1
+ 394 0134 6F93      		cli
+ 395 0136 7F93      	 ;  0 "" 2
+ 397 013a 9F93      	.LM26:
+ 398 013c AF93      	/* #NOAPP */
+ 399 013e BF93      		ldi r30,lo8(132)
+ 400 0140 EF93      		ldi r31,hi8(132)
+ 401 0142 FF93      		ld r22,Z
+ 402               		ldd r23,Z+1
+ 306:powerlog.c    **** 	uint16_t cycles;
+ 307:powerlog.c    **** 	//uint32_t time_us;
+ 308:powerlog.c    **** 	uint16_t time_ms;
+ 309:powerlog.c    **** 	
+ 310:powerlog.c    **** 	cli();						// disable interrupts, no interrupt during sensor active input
+ 404               	_reg__
+ 405               		st Z,__zero_reg__
+ 407               	.LM28:
+ 408 0144 F894      		ldi r24,lo8(0)
+ 409               		ldi r25,hi8(0)
+ 311:powerlog.c    **** 
+ 312:powerlog.c    **** 	
+ 313:powerlog.c    **** 	
+ 314:powerlog.c    **** 	
+ 410               	__floatunsisf
+ 411               		ldi r18,lo8(0x3e8dd2f2)
+ 412               		ldi r19,hi8(0x3e8dd2f2)
+ 413 0146 E4E8      		ldi r20,hlo8(0x3e8dd2f2)
+ 414 0148 F0E0      		ldi r21,hhi8(0x3e8dd2f2)
+ 415 014a 6081      		call __mulsf3
+ 416 014c 7181      		call __fixunssfsi
+ 315:powerlog.c    **** 
+ 417               	18,r22
+ 418               		ldi r20,lo8(0)
+ 419 014e 1182      		ldi r21,hi8(0)
+ 420 0150 1082      		ldi r22,lo8(3600000)
+ 316:powerlog.c    **** 
+ 317:powerlog.c    **** 	cycles = TCNT1;
+ 318:powerlog.c    **** 	TCNT1 = 0; 		// reset timer counter
+ 421               	 r23,hi8(3600000)
+ 422               		ldi r24,hlo8(3600000)
+ 423 0152 80E0      		ldi r25,hhi8(3600000)
+ 424 0154 90E0      		call __divmodsi4
+ 425 0156 0E94 0000 		sts (power)+1,r19
+ 426 015a 22EF      		sts power,r18
+ 428 015e 4DE8      	.LM29:
+ 429 0160 5EE3      		lds r24,pulse
+ 430 0162 0E94 0000 		lds r25,(pulse)+1
+ 431 0166 0E94 0000 		adiw r24,1
+ 432 016a 9B01      		sts (pulse)+1,r25
+ 433 016c 40E0      		sts pulse,r24
+ 435 0170 60E8      	.LM30:
+ 436 0172 7EEE      	/* #APP */
+ 437 0174 86E3      	 ;  325 "powerlog.c" 1
+ 438 0176 90E0      		sei
+ 439 0178 0E94 0000 	 ;  0 "" 2
+ 440 017c 3093 0000 	/* epilogue start */
+ 319:powerlog.c    **** 
+ 320:powerlog.c    **** 	//time_us = cycles * TIMER_CYCLE_US;
+ 442               	pop r31
+ 443               		pop r30
+ 444 0184 8091 0000 		pop r27
+ 445 0188 9091 0000 		pop r26
+ 446 018c 0196      		pop r25
+ 447 018e 9093 0000 		pop r24
+ 448 0192 8093 0000 		pop r23
+ 321:powerlog.c    **** 
+ 322:powerlog.c    **** 	time_ms = (uint16_t) (cycles * (TIMER_CYCLE_US / 1000.0));
+ 323:powerlog.c    **** 	power = (uint16_t) (3600000 / time_ms);
+ 324:powerlog.c    **** 
+ 325:powerlog.c    **** 	pulse++;
+ 449               	2
+ 450               		pop r21
+ 451               		pop r20
+ 452               		pop r19
+ 453 0196 7894      		pop r18
+ 454               		pop r0
+ 455               		out __SREG__,r0
+ 326:powerlog.c    **** 
+ 456               	
+ 457               		pop __zero_reg__
+ 458               		reti
+ 463 01a0 9F91      	.Lscope3:
+ 465 01a4 7F91      	.global	__vector_2
+ 467 01a8 5F91      	__vector_2:
+ 469 01ac 3F91      	.LM32:
+ 470 01ae 2F91      	.LFBB4:
+ 471 01b0 0F90      		push __zero_reg__
+ 472 01b2 0FBE      		push r0
+ 473 01b4 0F90      		in r0,__SREG__
+ 474 01b6 1F90      		push r0
+ 475 01b8 1895      		clr __zero_reg__
+ 476               	/* prologue: Signal */
+ 477               	/* frame size = 0 */
+ 479               	.LM33:
+ 480               	/* #APP */
+ 481               	 ;  330 "powerlog.c" 1
+ 482               		cli
+ 483               	 ;  0 "" 2
+ 327:powerlog.c    **** 
+ 328:powerlog.c    **** 	//printf("Puls nr %i @ Tid: %u cykler = %u ms = %u W\n\r", pulse, cycles, time_ms, power);
+ 329:powerlog.c    **** 	
+ 485               	1
+ 486               		sei
+ 487               	 ;  0 "" 2
+ 488 01ba 1F92      	/* epilogue start */
+ 490 01be 0FB6      	.LM35:
+ 491 01c0 0F92      	/* #NOAPP */
+ 492 01c2 1124      		pop r0
+ 493               		out __SREG__,r0
+ 494               		pop r0
+ 330:powerlog.c    **** 
+ 495               	o_reg__
+ 496               		reti
+ 498               	.Lscope4:
+ 500               	.global	__vector_1
+ 331:powerlog.c    **** 
+ 332:powerlog.c    **** 	
+ 333:powerlog.c    **** 
+ 334:powerlog.c    **** 	sei();									/* enable interrupts */
+ 501               		__vector_1, @function
+ 502               	__vector_1:
+ 504 01c6 7894      	.LM36:
+ 505               	.LFBB5:
+ 506               		push __zero_reg__
+ 335:powerlog.c    **** 
+ 507               	r0
+ 508               		in r0,__SREG__
+ 509               		push r0
+ 510 01c8 0F90      		clr __zero_reg__
+ 511 01ca 0FBE      	/* prologue: Signal */
+ 512 01cc 0F90      	/* frame size = 0 */
+ 514 01d0 1895      	.LM37:
+ 515               	/* #APP */
+ 516               	 ;  340 "powerlog.c" 1
+ 517               		cli
+ 518               	 ;  0 "" 2
+ 520               	.LM38:
+ 336:powerlog.c    **** 
+ 337:powerlog.c    **** }
+ 338:powerlog.c    **** 
+ 339:powerlog.c    **** SIGNAL(SIG_INTERRUPT1)
+ 521               	log.c" 1
+ 522               		sei
+ 523               	 ;  0 "" 2
+ 524 01d2 1F92      	/* epilogue start */
+ 526 01d6 0FB6      	.LM39:
+ 527 01d8 0F92      	/* #NOAPP */
+ 528 01da 1124      		pop r0
+ 529               		out __SREG__,r0
+ 530               		pop r0
+ 340:powerlog.c    **** 
+ 531               	o_reg__
+ 532               		reti
+ 534               	.Lscope5:
+ 536               	.global	__vector_7
+ 341:powerlog.c    **** 
+ 342:powerlog.c    **** {
+ 343:powerlog.c    **** 	cli();									/* disable interrupts, no interrupt during I2C bus transfer */
+ 537               		__vector_7, @function
+ 538               	__vector_7:
+ 540 01de 7894      	.LM40:
+ 541               	.LFBB6:
+ 542               		push __zero_reg__
+ 344:powerlog.c    **** 
+ 543               	r0
+ 544               		in r0,__SREG__
+ 545               		push r0
+ 546 01e0 0F90      		clr __zero_reg__
+ 547 01e2 0FBE      	/* prologue: Signal */
+ 548 01e4 0F90      	/* frame size = 0 */
+ 550 01e8 1895      	.LM41:
+ 551               	/* #APP */
+ 552               	 ;  349 "powerlog.c" 1
+ 553               		cli
+ 554               	 ;  0 "" 2
+ 556               	.LM42:
+ 345:powerlog.c    **** 
+ 346:powerlog.c    **** 
+ 347:powerlog.c    **** 	
+ 348:powerlog.c    **** 
+ 557               	log.c" 1
+ 558               		sei
+ 559               	 ;  0 "" 2
+ 560 01ea 1F92      	/* epilogue start */
+ 562 01ee 0FB6      	.LM43:
+ 563 01f0 0F92      	/* #NOAPP */
+ 564 01f2 1124      		pop r0
+ 565               		out __SREG__,r0
+ 566               		pop r0
+ 349:powerlog.c    **** 
+ 567               	o_reg__
+ 568               		reti
+ 570               	.Lscope6:
+ 571 01f4 F894      		.data
+ 572               	.LC0:
+ 350:powerlog.c    **** 
+ 351:powerlog.c    **** 	sei();									/* enable interrupts */
+ 352:powerlog.c    **** }
+ 353:powerlog.c    **** 
+ 573               	ng	"Timer overflow number %i\n\r"
+ 574               		.text
+ 576 01f6 7894      	.global	__vector_15
+ 578               	__vector_15:
+ 354:powerlog.c    **** 
+ 579               	n	68,0,278,.LM44-.LFBB7
+ 580               	.LM44:
+ 581               	.LFBB7:
+ 582 01f8 0F90      		push __zero_reg__
+ 583 01fa 0FBE      		push r0
+ 584 01fc 0F90      		in r0,__SREG__
+ 585 01fe 1F90      		push r0
+ 586 0200 1895      		clr __zero_reg__
+ 587               		push r18
+ 588               		push r19
+ 589               		push r20
+ 590               		push r21
+ 591 0000 5469 6D65 		push r22
+ 591      7220 6F76 
+ 591      6572 666C 
+ 591      6F77 206E 
+ 591      756D 6265 
+ 592               		push r23
+ 593               		push r24
+ 594               		push r25
+ 595               		push r26
+ 596               		push r27
+ 597               		push r30
+ 598               		push r31
+ 599               	/* prologue: Signal */
+ 600 0202 1F92      	/* frame size = 0 */
+ 602 0206 0FB6      	.LM45:
+ 603 0208 0F92      	/* #APP */
+ 604 020a 1124      	 ;  279 "powerlog.c" 1
+ 605 020c 2F93      		cli
+ 606 020e 3F93      	 ;  0 "" 2
+ 608 0212 5F93      	.LM46:
+ 609 0214 6F93      	/* #NOAPP */
+ 610 0216 7F93      		lds r24,timer_of
+ 611 0218 8F93      		subi r24,lo8(-(1))
+ 612 021a 9F93      		sts timer_of,r24
+ 614 021e BF93      	.LM47:
+ 615 0220 EF93      		sts (132)+1,__zero_reg__
+ 616 0222 FF93      		sts 132,__zero_reg__
+ 618               	.LM48:
+ 619               		lds r18,timer_of
+ 620               		rcall .
+ 621               		rcall .
+ 622               		in r30,__SP_L__
+ 623 0224 F894      		in r31,__SP_H__
+ 624               		adiw r30,1
+ 625               		ldi r24,lo8(.LC0)
+ 626               		ldi r25,hi8(.LC0)
+ 627               		std Z+1,r25
+ 628 0226 8091 0000 		st Z,r24
+ 629 022a 8F5F      		std Z+2,r18
+ 630 022c 8093 0000 		std Z+3,__zero_reg__
+ 631               		call printf
+ 633 0230 1092 8500 	.LM49:
+ 634 0234 1092 8400 	/* #APP */
+ 635               	 ;  285 "powerlog.c" 1
+ 636               		sei
+ 637 0238 2091 0000 	 ;  0 "" 2
+ 638 023c 00D0      	/* #NOAPP */
+ 639 023e 00D0      		pop __tmp_reg__
+ 640 0240 EDB7      		pop __tmp_reg__
+ 641 0242 FEB7      		pop __tmp_reg__
+ 642 0244 3196      		pop __tmp_reg__
+ 643 0246 80E0      	/* epilogue start */
+ 645 024a 9183      	.LM50:
+ 646 024c 8083      		pop r31
+ 647 024e 2283      		pop r30
+ 648 0250 1382      		pop r27
+ 649 0252 0E94 0000 		pop r26
+ 650               		pop r25
+ 651               		pop r24
+ 652               		pop r23
+ 653               		pop r22
+ 654 0256 7894      		pop r21
+ 655               		pop r20
+ 656               		pop r19
+ 657 0258 0F90      		pop r18
+ 658 025a 0F90      		pop r0
+ 659 025c 0F90      		out __SREG__,r0
+ 660 025e 0F90      		pop r0
+ 661               		pop __zero_reg__
+ 662               		reti
+ 664 0260 FF91      	.Lscope7:
+ 667 0266 AF91      	.global	parseMsg
+ 669 026a 8F91      	parseMsg:
+ 671 026e 6F91      	.LM51:
+ 672 0270 5F91      	.LFBB8:
+ 673 0272 4F91      		push r29
+ 674 0274 3F91      		push r28
+ 675 0276 2F91      		in r28,__SP_L__
+ 676 0278 0F90      		in r29,__SP_H__
+ 677 027a 0FBE      		sbiw r28,14
+ 678 027c 0F90      		in __tmp_reg__,__SREG__
+ 679 027e 1F90      		cli
+ 680 0280 1895      		out __SP_H__,r29
+ 681               		out __SREG__,__tmp_reg__
+ 682               		out __SP_L__,r28
+ 683               	/* prologue: function */
+ 684               	/* frame size = 14 */
+ 685               		std Y+8,r18
+ 686               		std Y+9,r19
+ 687               		std Y+10,r20
+ 355:powerlog.c    **** 
+ 356:powerlog.c    **** 
+ 357:powerlog.c    **** ISR (SIG_INTERRUPT0)
+ 358:powerlog.c    **** {
+ 359:powerlog.c    **** 	cli();									/* disable interrupts, no interrupt during I2C bus transfer */
+ 360:powerlog.c    **** 
+ 361:powerlog.c    **** 
+ 362:powerlog.c    **** 	sei();									/* enable interrupts */
+ 688               	
+ 689               		brne .L42
+ 691 0282 DF93      	.LM53:
+ 692 0284 CF93      		cpi r20,lo8(49)
+ 693 0286 CDB7      		breq .L44
+ 694 0288 DEB7      		cpi r20,lo8(64)
+ 695 028a 2E97      		breq .L45
+ 696 028c 0FB6      		cpi r20,lo8(48)
+ 697 028e F894      		brne .L42
+ 699 0292 0FBE      	.LM54:
+ 700 0294 CDBF      		lds r24,power
+ 701               		lds r25,(power)+1
+ 703 0296 2887      	.LM55:
+ 704 0298 3987      		ldi r30,lo8(txData)
+ 705 029a 4A87      		ldi r31,hi8(txData)
+ 706 029c 5B87      		st Z+,r25
+ 708 02a0 7D87      	.LM56:
+ 709 02a2 8E87      		st Z,r24
+ 363:powerlog.c    **** 
+ 364:powerlog.c    **** }
+ 365:powerlog.c    **** 
+ 366:powerlog.c    **** 
+ 367:powerlog.c    **** ISR (SIG_PIN_CHANGE3)
+ 368:powerlog.c    **** {
+ 369:powerlog.c    **** 	cli();									/* disable interrupts, no interrupt during I2C bus transfer */
+ 370:powerlog.c    **** 
+ 371:powerlog.c    **** 	
+ 372:powerlog.c    **** 
+ 373:powerlog.c    **** 	sei();									/* enable interrupts */
+ 374:powerlog.c    **** }
+ 375:powerlog.c    **** 
+ 710               	 .L46
+ 711               	.L44:
+ 713 02a6 01F4      	.LM57:
+ 376:powerlog.c    **** 
+ 377:powerlog.c    **** 
+ 378:powerlog.c    **** 
+ 379:powerlog.c    **** 
+ 714               	 r24,pulse
+ 715               		lds r25,(pulse)+1
+ 717 02aa 01F0      	.LM58:
+ 718 02ac 4034      		sts (pulse)+1,__zero_reg__
+ 719 02ae 01F0      		sts pulse,__zero_reg__
+ 721 02b2 01F4      	.LM59:
+ 380:powerlog.c    **** 
+ 381:powerlog.c    **** 
+ 382:powerlog.c    **** 
+ 383:powerlog.c    **** unsigned char parseMsg(msgType msg)
+ 722               	,lo8(txData)
+ 723               		ldi r31,hi8(txData)
+ 724 02b4 8091 0000 		st Z+,r25
+ 384:powerlog.c    **** 
+ 385:powerlog.c    **** {
+ 386:powerlog.c    **** 	msgType txMsg;
+ 726               	0:
+ 727               		st Z,r24
+ 728 02bc E0E0      		ldi r21,lo8(2)
+ 729 02be F0E0      		rjmp .L46
+ 730 02c0 9193      	.L45:
+ 387:powerlog.c    **** 
+ 731               	bn	68,0,406,.LM61-.LFBB8
+ 732               	.LM61:
+ 733 02c2 8083      		lds r24,voltage
+ 734 02c4 52E0      		sts txData,r24
+ 735 02c6 00C0      		ldi r21,lo8(1)
+ 736               	.L46:
+ 388:powerlog.c    **** 
+ 389:powerlog.c    **** 
+ 390:powerlog.c    **** 	uint16_t temp;
+ 391:powerlog.c    **** 	
+ 392:powerlog.c    **** 	txMsg.devAddr = 0;
+ 393:powerlog.c    **** 	txMsg.command = msg.command;
+ 737               	n	68,0,367,.LM62-.LFBB8
+ 738               	.LM62:
+ 739 02c8 8091 0000 		std Y+2,__zero_reg__
+ 394:powerlog.c    **** 
+ 741               	3:
+ 742               		std Y+3,r20
+ 744 02d4 1092 0000 	.LM64:
+ 395:powerlog.c    **** 
+ 396:powerlog.c    **** 	txMsg.size = 0;
+ 397:powerlog.c    **** 	txMsg.chksum = 0;
+ 745               	 Y+7,__zero_reg__
+ 747 02d8 E0E0      	.LM65:
+ 748 02da F0E0      		ldi r24,lo8(txData)
+ 749 02dc 9193      		ldi r25,hi8(txData)
+ 398:powerlog.c    **** 
+ 750               	r22,r24
+ 751               		std Y+6,r25
+ 752 02de 8083      		std Y+5,r24
+ 754 02e2 00C0      	.LM66:
+ 755               		std Y+4,r21
+ 399:powerlog.c    **** 
+ 400:powerlog.c    **** 	txMsg.data_ptr = &txData[0];
+ 401:powerlog.c    **** 
+ 402:powerlog.c    **** 	
+ 403:powerlog.c    **** 	
+ 404:powerlog.c    **** 	if (msg.devAddr != MYADDRESS)
+ 405:powerlog.c    **** 		return 0;
+ 406:powerlog.c    **** 	else
+ 756               	18,Y+1
+ 757               		ldi r19,lo8(0)
+ 758 02e4 8091 0000 		ldd r23,Y+6
+ 759 02e8 8093 0000 		ldi r24,lo8(0)
+ 760 02ec 51E0      		call sendMsg
+ 761               		ldi r24,lo8(1)
+ 762               		rjmp .L47
+ 763               	.L42:
+ 765               	.LM67:
+ 766               		ldi r24,lo8(0)
+ 767 02f0 4B83      	.L47:
+ 768               	/* epilogue start */
+ 770 02f2 1F82      	.LM68:
+ 771               		adiw r28,14
+ 772               		in __tmp_reg__,__SREG__
+ 773 02f4 80E0      		cli
+ 774 02f6 90E0      		out __SP_H__,r29
+ 775 02f8 682F      		out __SREG__,__tmp_reg__
+ 776 02fa 9E83      		out __SP_L__,r28
+ 777 02fc 8D83      		pop r28
+ 407:powerlog.c    **** 
+ 408:powerlog.c    **** 	{
+ 409:powerlog.c    **** 		switch (msg.command)
+ 410:powerlog.c    **** 		{
+ 411:powerlog.c    **** 			case READ_POWER :
+ 412:powerlog.c    **** 				
+ 413:powerlog.c    **** 				temp = power;
+ 414:powerlog.c    **** 				
+ 415:powerlog.c    **** 				txMsg.size = 2;
+ 416:powerlog.c    **** 				txData[0] = (uint8_t) (temp >> 8);		// msb
+ 417:powerlog.c    **** 				txData[1] = (uint8_t) (temp & 0xFF);	// lsb
+ 778               	arseMsg, .-parseMsg
+ 783 0304 7E81      	.Lscope8:
+ 785 0308 0E94 0000 	.global	ioinit
+ 787 030e 00C0      	ioinit:
+ 418:powerlog.c    **** 
+ 419:powerlog.c    **** 				
+ 789               	B9:
+ 790               	/* prologue: function */
+ 791 0310 80E0      	/* frame size = 0 */
+ 793               	.LM70:
+ 420:powerlog.c    **** 
+ 421:powerlog.c    **** 				break;
+ 422:powerlog.c    **** 				
+ 794               	r24,lo8(127)
+ 795               		out 33-32,r24
+ 797 0314 0FB6      	.LM71:
+ 798 0316 F894      		out 34-32,__zero_reg__
+ 800 031a 0FBE      	.LM72:
+ 801 031c CDBF      		ldi r24,lo8(1)
+ 802 031e CF91      		out 36-32,r24
+ 804 0322 0895      	.LM73:
+ 805               		out 37-32,__zero_reg__
+ 807               	.LM74:
+ 808               		out 39-32,__zero_reg__
+ 810               	.LM75:
+ 811               		out 40-32,__zero_reg__
+ 813               	.LM76:
+ 814               		ldi r24,lo8(2)
+ 815               		out 42-32,r24
+ 817               	.LM77:
+ 818               		out 43-32,__zero_reg__
+ 820               	.LM78:
+ 821               		ldi r30,lo8(61)
+ 822 0324 8FE7      		ldi r31,hi8(61)
+ 823 0326 81B9      		st Z,__zero_reg__
+ 825               	.LM79:
+ 826 0328 12B8      		ldi r24,lo8(-96)
+ 827               		sts 105,r24
+ 829 032a 81E0      	.LM80:
+ 830 032c 84B9      		ldi r24,lo8(7)
+ 831               		out 60-32,r24
+ 833 032e 15B8      	.LM81:
+ 834               		ldi r24,lo8(4)
+ 835               		st Z,r24
+ 837               	.LM82:
+ 838               		sts 115,__zero_reg__
+ 840               	.LM83:
+ 841               		sts 109,__zero_reg__
+ 843 0336 8AB9      	.LM84:
+ 844               		sts 108,__zero_reg__
+ 846 0338 1BB8      	.LM85:
+ 847               		sts 107,__zero_reg__
+ 849 033a EDE3      	.LM86:
+ 850 033c F0E0      		sts 104,__zero_reg__
+ 852               	.LM87:
+ 853               		sts 128,__zero_reg__
+ 855 0342 8093 6900 	.LM88:
+ 856               		ldi r24,lo8(5)
+ 857               		sts 129,r24
+ 859 0348 8CBB      	.LM89:
+ 860               		sts (136)+1,__zero_reg__
+ 861               		sts 136,__zero_reg__
+ 863 034c 8083      	.LM90:
+ 864               		sts 100,__zero_reg__
+ 866 034e 1092 7300 	.LM91:
+ 867               		ldi r24,lo8(mystdout)
+ 868               		ldi r25,hi8(mystdout)
+ 869 0352 1092 6D00 		sts (__iob+2)+1,r25
+ 870               		sts __iob+2,r24
+ 872 0356 1092 6C00 	.LM92:
+ 873               		ldi r24,lo8(23)
+ 874               		ldi r25,hi8(23)
+ 875 035a 1092 6B00 		call uart_init
+ 877               	.LM93:
+ 878 035e 1092 6800 		ldi r24,lo8(1)
+ 879               		ldi r25,hi8(1)
+ 880               		call uart1_init
+ 882               	.LM94:
+ 883               	/* #APP */
+ 884 0366 85E0      	 ;  249 "powerlog.c" 1
+ 885 0368 8093 8100 		sei
+ 886               	 ;  0 "" 2
+ 888 036c 1092 8900 	.LM95:
+ 889 0370 1092 8800 	/* #NOAPP */
+ 890               		ldi r24,lo8(-1)
+ 891               	/* epilogue start */
+ 892 0374 1092 6400 		ret
+ 894               	.Lscope9:
+ 895 0378 80E0      		.data
+ 896 037a 90E0      	.LC1:
+ 897 037c 9093 0000 		.string	"Startup Completed\n\r"
+ 898 0380 8093 0000 	.LC2:
+ 899               		.string	"%u W\n\r"
+ 900               		.text
+ 902 0386 90E0      	.global	main
+ 904               	main:
+ 906 038c 81E0      	.LM96:
+ 907 038e 90E0      	.LFBB10:
+ 908 0390 0E94 0000 		push r15
+ 909               		push r16
+ 910               		push r17
+ 911               		push r28
+ 912               		push r29
+ 913 0394 7894      	/* prologue: function */
+ 914               	/* frame size = 0 */
+ 916               	.LM97:
+ 917               		sts msgComplete,__zero_reg__
+ 919               	.LM98:
+ 920 0398 0895      		ldi r24,lo8(-1)
+ 921               		sts pos,r24
+ 923               	.LM99:
+ 924               		ldi r24,lo8(10000)
+ 925 001b 5374 6172 		ldi r25,hi8(10000)
+ 925      7475 7020 
+ 925      436F 6D70 
+ 925      6C65 7465 
+ 925      640A 0D00 
+ 926               		call delay_us
+ 928               	.LM100:
+ 929               		call ioinit
+ 931               	.LM101:
+ 932               		rcall .
+ 423:powerlog.c    **** 
+ 424:powerlog.c    **** 			case READ_PULSES : 
+ 425:powerlog.c    **** 				
+ 426:powerlog.c    **** 				temp = pulse;
+ 427:powerlog.c    **** 				pulse = 0;
+ 428:powerlog.c    **** 				
+ 429:powerlog.c    **** 				txMsg.size = 2;
+ 430:powerlog.c    **** 				txData[0] = (uint8_t) (temp >> 8);		// msb
+ 431:powerlog.c    **** 				txData[1] = (uint8_t) (temp & 0xFF);	// lsb
+ 432:powerlog.c    **** 				
+ 433:powerlog.c    **** 				break;
+ 434:powerlog.c    **** 				
+ 435:powerlog.c    **** 			case READ_VOLTAGE :
+ 436:powerlog.c    **** 			
+ 437:powerlog.c    **** 				
+ 438:powerlog.c    **** 				txMsg.size = 1;
+ 439:powerlog.c    **** 				txData[0] = voltage;
+ 440:powerlog.c    **** 				
+ 933               	(0)
+ 934               		pop __tmp_reg__
+ 935               		pop __tmp_reg__
+ 937 039c 0F93      	.LM102:
+ 938 039e 1F93      		clr r15
+ 939 03a0 CF93      		dec r15
+ 941               	.LM103:
+ 942               		ldi r16,lo8(.LC2)
+ 441:powerlog.c    **** 
+ 442:powerlog.c    **** 				break;
+ 943               	op __tmp_reg__
+ 945 03a4 1092 0000 	.LM102:
+ 443:powerlog.c    **** 
+ 444:powerlog.c    **** 			
+ 445:powerlog.c    **** 			default : 
+ 946               	,r25
+ 947               		std Z+1,r24
+ 948 03a8 8FEF      		call printf
+ 949 03aa 8093 0000 		ldi r28,lo8(0)
+ 446:powerlog.c    **** 
+ 447:powerlog.c    **** 
+ 448:powerlog.c    **** 				return 0;
+ 449:powerlog.c    **** 				
+ 450:powerlog.c    **** 				break;
+ 451:powerlog.c    **** 		}
+ 452:powerlog.c    **** 
+ 453:powerlog.c    **** 		sendMsg(txMsg);
+ 454:powerlog.c    **** 	
+ 455:powerlog.c    **** 		return 1;
+ 456:powerlog.c    **** 	}
+ 950               	M101:
+ 951               		rcall .
+ 952 03ae 80E1      		ldi r24,lo8(.LC1)
+ 953 03b0 97E2      		ldi r25,hi8(.LC1)
+ 954 03b2 0E94 0000 		in r30,__SP_L__
+ 457:powerlog.c    **** 
+ 458:powerlog.c    **** 
+ 955               	,0,458,.LM100-.LFBB10
+ 956               	.LM100:
+ 957 03b6 0E94 0000 		call ioinit
+ 459:powerlog.c    **** 
+ 460:powerlog.c    **** }
+ 461:powerlog.c    **** 
+ 958               	os,r24
+ 960 03ba 00D0      	.LM99:
+ 961 03bc 80E0      		ldi r24,lo8(10000)
+ 962 03be 90E0      		ldi r25,hi8(10000)
+ 963 03c0 EDB7      		call delay_us
+ 965 03c4 9283      	.LM100:
+ 966 03c6 8183      		call ioinit
+ 968 03cc C0E0      	.LM101:
+ 969 03ce D0E0      		rcall .
+ 970 03d0 0F90      		ldi r24,lo8(.LC1)
+ 971 03d2 0F90      		ldi r25,hi8(.LC1)
+ 462:powerlog.c    **** 
+ 463:powerlog.c    **** 
+ 464:powerlog.c    **** 
+ 465:powerlog.c    **** 
+ 466:powerlog.c    **** /* ****************************************************************
+ 467:powerlog.c    **** *
+ 468:powerlog.c    **** * Name			: main
+ 972               	elay_us
+ 974 03d4 FF24      	.LM100:
+ 975 03d6 FA94      		call ioinit
+ 469:powerlog.c    **** 
+ 470:powerlog.c    **** *
+ 471:powerlog.c    **** * Function		: main routine
+ 472:powerlog.c    **** *
+ 473:powerlog.c    **** * Parameters	: void
+ 474:powerlog.c    **** *
+ 475:powerlog.c    **** * Returns		: int 0
+ 476:powerlog.c    **** *
+ 477:powerlog.c    **** ***************************************************************** */
+ 478:powerlog.c    **** 
+ 479:powerlog.c    **** int main(void)
+ 480:powerlog.c    **** {
+ 481:powerlog.c    **** 	
+ 482:powerlog.c    **** 	msgComplete = 0;
+ 483:powerlog.c    **** 	
+ 484:powerlog.c    **** 	uint16_t lastPulse = 0;
+ 976               	os,r24
+ 978 03d8 00E0      	.LM99:
+ 979 03da 10E0      		ldi r24,lo8(10000)
+ 980               		ldi r25,hi8(10000)
+ 981               		call delay_us
+ 983 03dc 0E94 0000 	.LM100:
+ 984 03e0 8130      		call ioinit
+ 986               	.LM101:
+ 987               		rcall .
+ 988 03e4 F092 0000 		ldi r24,lo8(.LC1)
+ 989               		ldi r25,hi8(.LC1)
+ 990               		in r30,__SP_L__
+ 991 03e8 1092 0000 		in r31,__SP_H__
+ 992               		std Z+2,r25
+ 993               		std Z+1,r24
+ 994 03ec 2091 0000 		call printf
+ 995 03f0 3091 0000 		ldi r28,lo8(0)
+ 996 03f4 4091 0000 		ldi r29,hi8(0)
+ 997 03f8 5091 0000 		pop __tmp_reg__
+ 998 03fc 6091 0000 		pop __tmp_reg__
+ 1000 0404 8091 0000 	.LM102:
+ 1001 0408 0E94 0000 		clr r15
+ 1002 040c 00C0      		dec r15
+ 1004               	.LM103:
+ 1005               		ldi r16,lo8(.LC2)
+ 1006 040e 8091 0000 		ldi r17,hi8(.LC2)
+ 1007 0412 8031      	.L56:
+ 1009               	.LM104:
+ 1010               		call pollMsg
+ 1011 0416 F092 0000 		cpi r24,lo8(1)
+ 1012               		brne .L52
+ 1014 041a 1092 0000 	.LM105:
+ 1015 041e 00C0      		sts pos,r15
+ 1017               	.LM106:
+ 1018               		sts msgComplete,__zero_reg__
+ 1020 0424 9091 0000 	.LM107:
+ 1021 0428 8C17      		lds r18,rxMsg
+ 1022 042a 9D07      		lds r19,rxMsg+1
+ 1023 042c 01F0      		lds r20,rxMsg+2
+ 1024               		lds r21,rxMsg+3
+ 1025               		lds r22,rxMsg+4
+ 1026 042e C091 0000 		lds r23,rxMsg+5
+ 1027 0432 D091 0000 		lds r24,rxMsg+6
+ 1028               		call parseMsg
+ 1029               		rjmp .L56
+ 1030 0436 0E94 0000 	.L52:
+ 1032               	.LM108:
+ 1033               		lds r24,pos
+ 1034 043e 8091 0000 		cpi r24,lo8(16)
+ 1035 0442 9091 0000 		brlo .L54
+ 1037 0448 00D0      	.LM109:
+ 1038 044a EDB7      		sts pos,r15
+ 1040 044e 3196      	.LM110:
+ 1041 0450 1183      		sts msgComplete,__zero_reg__
+ 1042 0452 0083      		rjmp .L56
+ 1043 0454 9383      	.L54:
+ 1045 0458 0E94 0000 	.LM111:
+ 1046 045c 0F90      		lds r24,pulse
+ 1047 045e 0F90      		lds r25,(pulse)+1
+ 1048 0460 0F90      		cp r24,r28
+ 1049 0462 0F90      		cpc r25,r29
+ 1050 0464 00C0      		breq .L56
+ 1052               	.LM112:
+ 1053               		lds r28,pulse
+ 1054               		lds r29,(pulse)+1
+ 1056               	.LM113:
+ 1057               		call read_adc
+ 1058               		sts voltage,r24
+ 1060               	.LM114:
+ 1061               		lds r24,power
+ 1062 0000 0000      		lds r25,(power)+1
+ 1063               		rcall .
+ 1064               		rcall .
+ 1065               		in r30,__SP_L__
+ 1066               		in r31,__SP_H__
+ 1067               		adiw r30,1
+ 1068 0002 0000      		std Z+1,r17
+ 1069               		st Z,r16
+ 1070               		std Z+3,r25
+ 1071               		std Z+2,r24
+ 1072               		call printf
+ 1073               		pop __tmp_reg__
+ 1074 0004 00        		pop __tmp_reg__
+ 1075               		pop __tmp_reg__
+ 1076               		pop __tmp_reg__
+ 1077               		rjmp .L56
+ 1082               	.Lscope10:
+ 1083               	.global	pulse
+ 1084               	.global	pulse
+ 1085 0036 0000 00   		.section .bss
+ 1088 003e 0000      	pulse:
+ 1089 0040 0000      		.skip 2,0
+ 1090 0042 0000      	.global	power
+ 1091               	.global	power
+ 1094               	power:
+ 1095               		.skip 2,0
+ 1096               	.global	timer_of
+ 1097               	.global	timer_of
+ 1100               	timer_of:
+ 1101               		.skip 1,0
+ 1102               	.global	voltage
+ 1103               	.global	voltage
+ 1106               	voltage:
+ 1107               		.skip 1,0
+ 1108               		.data
+DEFINED SYMBOLS
+                            *ABS*:00000000 powerlog.c
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:106    .text:00000000 delay_us
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:341    .text:00000100 delay_ms
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:381    .text:00000122 __vector_3
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:1067   .bss:00000002 power
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:1061   .bss:00000000 pulse
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:484    .text:000001ba __vector_2
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:520    .text:000001d2 __vector_1
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:556    .text:000001ea __vector_7
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:596    .text:00000202 __vector_15
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:1073   .bss:00000004 timer_of
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:687    .text:00000282 parseMsg
+                            *COM*:00000003 txData
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:1079   .bss:00000005 voltage
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:814    .text:00000324 ioinit
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:1084   .data:00000036 mystdout
+C:\Users\joakim\AppData\Local\Temp/cckz7Atu.s:932    .text:0000039a main
+                            *COM*:00000001 msgComplete
+                            *COM*:00000001 pos
+                            *COM*:00000007 rxMsg
+                            *COM*:0000000a rxCommand
+
+UNDEFINED SYMBOLS
+__floatunsisf
+__mulsf3
+__ltsf2
+__gtsf2
+__divsf3
+__fixunssfsi
+__divmodsi4
+printf
+sendMsg
+__iob
+uart_init
+uart1_init
+pollMsg
+read_adc
+uart_putchar
+__do_copy_data
+__do_clear_bss

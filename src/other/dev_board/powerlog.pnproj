@@ -1,0 +1,1 @@
+<Project name="powerlog"><File path="Makefile"></File><File path="defs.h"></File><File path="globals.h"></File><File path="powerlog.c"></File><File path="types.h"></File><File path="uart.c"></File><File path="uart.h"></File><File path="powerlog.h"></File><File path="adc.c"></File><File path="adc.h"></File></Project>

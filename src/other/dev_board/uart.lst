@@ -1,0 +1,179 @@
+   1               		.file	"uart.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  79               	.global	uart_init
+  81               	uart_init:
+   1:uart.c        **** #include "uart.h"
+   2:uart.c        **** #include <avr/io.h>	
+   3:uart.c        **** 
+   4:uart.c        **** void uart_init(unsigned int ubrr)
+   5:uart.c        **** {
+  82               	 0 */
+  84               	.LM1:
+  85               		sts 197,r25
+   6:uart.c        **** 	/* Set baud rate */
+   7:uart.c        **** 	UBRR0H = (unsigned char) (ubrr>>8);
+  87               	68,0,5,.LM0-.LFBB1
+  88               	.LM0:
+  89 0000 9093 C500 	.LFBB1:
+   8:uart.c        **** 	UBRR0L = (unsigned char) ubrr;
+  90               	tabn	162,0,0,0
+  92 0004 8093 C400 	.global	uart_init
+   9:uart.c        **** 	
+  10:uart.c        **** 	// enable double speed mode
+  11:uart.c        **** 	UCSR0A = 1<<U2X0;
+  93               	ow:(0,11),0,8;high:(0,11),8,8;extended:(0,11),16,8;;",128,0,0,0
+  12:uart.c        **** 	
+  13:uart.c        **** 	/* Enable receiver and transmitter */
+  14:uart.c        **** 	UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+  97               	_t:t(8,1)=(8,2)=s3low:(0,11),0,8;high:(0,11),8,8;extended:(0,11),16,8;;",128,0,0,0
+  15:uart.c        **** 	
+  16:uart.c        **** 	/* Set frame format: 8 data, 1 stop bit */
+  17:uart.c        **** 	//UCSRC = (1<<URSEL)|(1<<UCSZ)|(1<<UCSZ);
+  18:uart.c        **** 	UCSR0C = (1<<USBS0)|(3<<UCSZ00);
+ 101               	_t:t(8,1)=(8,2)=s3low:(0,11),0,8;high:(0,11),8,8;extended:(0,11),16,8;;",128,0,0,0
+ 105               	.global	uart_init
+  19:uart.c        **** }
+ 106               	ow:(0,11),0,8;high:(0,11),8,8;extended:(0,11),16,8;;",128,0,0,0
+ 110               	.global	uart_init
+ 112               	uart_init:
+ 114               	.LM0:
+ 115               	.LFBB1:
+  20:uart.c        **** 
+  21:uart.c        **** void uart_send_byte(unsigned char *data)
+  22:uart.c        **** {
+ 116               	tabn	162,0,0,0
+ 118               	.global	uart_init
+ 120               	uart_init:
+  23:uart.c        **** 	/* Wait for empty transmit buffer */
+  24:uart.c        **** 	while ( !( UCSR0A & (1<<UDRE0)) )
+ 122               	bn	162,0,0,0
+ 125 0020 F0E0      	.global	uart_init
+ 127 0022 8081      	uart_init:
+ 129 0026 00C0      	.LM0:
+  25:uart.c        **** 	;
+  26:uart.c        **** 	
+  27:uart.c        **** 	/* Put data into buffer, sends the data */
+  28:uart.c        **** 	UDR0 = *data;
+ 130               	0,0,0
+ 133 002a 8093 C600 	.global	uart_init
+  29:uart.c        **** }
+ 135               	;extended:(0,11),16,8;;",128,0,0,0
+ 139               	.global	uart_init
+ 141               	uart_init:
+ 143               	.LM0:
+ 144               	.LFBB1:
+ 145               	/* prologue: function */
+  30:uart.c        **** 
+  31:uart.c        **** extern void copy_str(const char *in, unsigned char *msg, unsigned char length)
+  32:uart.c        **** {
+ 146               	rt_init:F(0,15)",36,0,0,uart_init
+ 147               	.global	uart_init
+ 149               	uart_init:
+ 151 0030 582F      	.LM0:
+ 152 0032 DB01      	.LFBB1:
+  33:uart.c        **** 	unsigned char i;
+  34:uart.c        **** 	
+  35:uart.c        **** 	for (i = 0; i < length; i++)
+ 153               	tabn	162,0,0,0
+ 155 0034 4423      	.global	uart_init
+ 157 0038 282F      	uart_init:
+ 159 003c F901      	.LM0:
+ 160               	.LFBB1:
+  36:uart.c        **** 	{ 
+  37:uart.c        **** 		*msg++ = *in++; 		// copy text string byte by byte
+ 161               	tabn	162,0,0,0
+ 163 003e 8191      	.global	uart_init
+ 165               	uart_init:
+ 167 0042 8E2F      	.LM0:
+ 168 0044 851B      	.LFBB1:
+ 169 0046 8417      	/* prologue: function */
+ 170 0048 00F0      	/* frame size = 0 */
+ 172 004a 0895      	.LM1:
+ 173               		sts 197,r25
+ 175               	.LM2:
+ 176               		sts 196,r24
+ 178               	.LM3:
+ 179               		ldi r24,lo8(2)
+ 180               		sts 192,r24
+  38:uart.c        **** 	}
+  39:uart.c        **** 
+  40:uart.c        **** }
+  41:uart.c        **** 
+  42:uart.c        **** int uart_putchar(char c, FILE *stream)
+  43:uart.c        **** {
+ 181               	8,0,7,.LM1-.LFBB1
+ 182               	.LM1:
+ 183               		sts 197,r25
+ 185               	.LM2:
+ 186               		sts 196,r24
+  44:uart.c        ****     if (c == '\n') uart_putchar('\r', stream);
+ 188               	tion */
+ 189               	/* frame size = 0 */
+ 191 0052 01F4      	.LM1:
+ 192 0054 8DE0      		sts 197,r25
+ 194               	.LM2:
+  45:uart.c        ****   
+  46:uart.c        ****     loop_until_bit_is_set(UCSR0A, UDRE0);
+ 195               	.LM0-.LFBB1
+ 196               	.LM0:
+ 197 005a E0EC      	.LFBB1:
+ 198 005c F0E0      	/* prologue: function */
+ 199               	/* frame size = 0 */
+ 201 0060 85FF      	.LM1:
+ 202 0062 00C0      		sts 197,r25
+  47:uart.c        ****     UDR0 = c;
+ 203               	function
+ 204               	uart_init:
+  48:uart.c        ****     
+  49:uart.c        ****     return 0;
+  50:uart.c        **** }
+ 206               	bn	162,0,0,0
+ 209 006a 90E0      	.global	uart_init
+ 211 006c 1F91      	uart_init:
+ 213               	.LM0:
+ 214               	.LFBB1:
+ 215               	/* prologue: function */
+ 216               	/* frame size = 0 */
+ 218               	.LM1:
+  51:uart.c        **** 
+  52:uart.c        **** uint8_t uart_getchar(void)
+  53:uart.c        **** {
+ 219               	e	uart_init, @function
+ 220               	uart_init:
+ 222               	.LM0:
+ 223               	.LFBB1:
+  54:uart.c        ****     while( !(UCSR0A & (1<<RXC0)) );
+ 224               	tabn	162,0,0,0
+ 226 0070 E0EC      	.global	uart_init
+ 228               	uart_init:
+ 230 0076 8823      	.LM0:
+ 231 0078 04F4      	.LFBB1:
+  55:uart.c        ****     return(UDR0);
+ 232               	tabn	162,0,0,0
+ 234 007a 8091 C600 	.global	uart_init
+  56:uart.c        **** }
+ 236               	;extended:(0,11),16,8;;",128,0,0,0
+ 240               	.global	uart_init
+ 242               	uart_init:
+DEFINED SYMBOLS
+                            *ABS*:00000000 uart.c
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:81     .text:00000000 uart_init
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:115    .text:0000001c uart_send_byte
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:145    .text:00000030 copy_str
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:180    .text:0000004c uart_putchar
+C:\Users\joakim\AppData\Local\Temp/ccVnIiD5.s:218    .text:00000070 uart_getchar
+
+NO UNDEFINED SYMBOLS

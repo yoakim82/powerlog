@@ -1,0 +1,3 @@
+http://www.frank-zhao.com/fusecalc/fusecalc.php?chip=atmega644p&LOW=CB&HIGH=99&EXTENDED=FF&LOCKBIT=FF
+
+avrdude -p atmega644p -P usb -c usbtiny	-U lfuse:w:0xCB:m -U hfuse:w:0x99:m 

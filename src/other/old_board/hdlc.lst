@@ -1,0 +1,417 @@
+   1               		.file	"hdlc.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   9               		.text
+  10               	.Ltext0:
+  86               	.global	__vector_28
+  88               	__vector_28:
+   1:hdlc.c        **** #include <avr/interrupt.h>
+   2:hdlc.c        **** #include "hdlc.h"
+   3:hdlc.c        **** #include "uart.h"
+   4:hdlc.c        **** //#include "globals.h"	
+   5:hdlc.c        **** 
+   6:hdlc.c        **** 
+   7:hdlc.c        **** // serial port 1 (to Aircom) interupt
+   8:hdlc.c        **** ISR(USART1_RX_vect) 
+   9:hdlc.c        **** {
+  89               	sh r0
+  90               		clr __zero_reg__
+  91               		push r24
+  92 0000 1F92      		push r25
+  93 0002 0F92      		push r30
+  94 0004 0FB6      		push r31
+  95 0006 0F92      	/* prologue: Signal */
+  96 0008 1124      	/* frame size = 0 */
+  98 000c 9F93      	.LM1:
+  99 000e EF93      	/* #APP */
+ 100 0010 FF93      	 ;  11 "hdlc.c" 1
+ 101               		cli
+ 102               	 ;  0 "" 2
+  10:hdlc.c        **** 	unsigned char rxByte;
+  11:hdlc.c        **** 	cli();						// disable interrupts
+ 103               	3,.LM2-.LFBB1
+ 104               	.LM2:
+ 105               	/* #NOAPP */
+ 106               		lds r25,206
+ 108               	.LM3:
+  12:hdlc.c        **** 
+  13:hdlc.c        **** 		rxByte = UDR1;
+ 109               	25,lo8(126)
+ 110               		brne .L2
+ 112 0014 9091 CE00 	.LM4:
+  14:hdlc.c        **** 		
+  15:hdlc.c        **** 		if (rxByte == 0x7E)
+ 113               	 pos,__zero_reg__
+ 114               		rjmp .L3
+ 115 0018 9E37      	.L2:
+  16:hdlc.c        **** 			pos = 0;
+ 117               	:
+ 118               		cpi r25,lo8(125)
+ 119 001c 1092 0000 		brne .L4
+ 121               	.LM6:
+  17:hdlc.c        **** 		else if (rxByte == 0x7D)
+ 122               	r24,lo8(1)
+ 123               		sts msgComplete,r24
+ 124 0022 9D37      		rjmp .L3
+ 125 0024 01F4      	.L4:
+  18:hdlc.c        **** 			msgComplete = 1;
+ 126               	abn	68,0,20,.LM7-.LFBB1
+ 127               	.LM7:
+ 128 0026 81E0      		lds r24,pos
+ 129 0028 8093 0000 		ldi r30,lo8(rxCommand)
+ 130 002c 00C0      		ldi r31,hi8(rxCommand)
+ 131               		add r30,r24
+  19:hdlc.c        **** 		else
+  20:hdlc.c        **** 			rxCommand[pos++] = rxByte;
+ 132               	31,__zero_reg__
+ 133               		st Z,r25
+ 134 002e 8091 0000 		subi r24,lo8(-(1))
+ 135 0032 E0E0      		sts pos,r24
+ 136 0034 F0E0      	.L3:
+ 138 0038 F11D      	.LM8:
+ 139 003a 9083      	/* #APP */
+ 140 003c 8F5F      	 ;  23 "hdlc.c" 1
+ 141 003e 8093 0000 		sei
+ 142               	 ;  0 "" 2
+  21:hdlc.c        **** 
+  22:hdlc.c        **** 
+  23:hdlc.c        **** 	sei();						/* enable interrupts */
+ 143               	 start */
+ 145               	.LM9:
+ 146               	/* #NOAPP */
+ 147 0042 7894      		pop r31
+ 148               		pop r30
+ 149               		pop r25
+  24:hdlc.c        **** }
+ 150               	4
+ 151               		pop r0
+ 152               		out __SREG__,r0
+ 153 0044 FF91      		pop r0
+ 154 0046 EF91      		pop __zero_reg__
+ 155 0048 9F91      		reti
+ 160 0052 1F90      	.Lscope1:
+ 162               	.global	pollMsg
+ 164               	pollMsg:
+ 166               	.LM10:
+ 167               	.LFBB2:
+ 168               	/* prologue: function */
+ 169               	/* frame size = 0 */
+  25:hdlc.c        **** 
+  26:hdlc.c        **** 
+  27:hdlc.c        **** unsigned char pollMsg(void)
+  28:hdlc.c        **** {
+ 171               	tst r24
+ 172               		breq .L7
+ 173               		lds r24,msgComplete
+ 174               		cpi r24,lo8(1)
+ 175               		brne .L7
+  29:hdlc.c        **** 	if (pos > 0 && msgComplete == 1)
+ 176               	bn	68,0,31,.LM12-.LFBB2
+ 177               	.LM12:
+ 178 0056 8091 0000 		ldi r20,lo8(rxMsg+1)
+ 179 005a 8823      		ldi r21,hi8(rxMsg+1)
+ 180 005c 01F0      		ldi r24,lo8(rxCommand)
+ 181 005e 8091 0000 		ldi r25,hi8(rxCommand)
+ 182 0062 8130      		movw r26,r24
+ 183 0064 01F4      		ld r18,X+
+  30:hdlc.c        **** 	{	
+  31:hdlc.c        **** 		rxMsg.devAddr = rxCommand[0];
+ 184               	0,r20
+ 185               		st Z+,r18
+ 187 0068 50E0      	.LM13:
+ 188 006a 80E0      		ld r18,X
+ 189 006c 90E0      		st Z,r18
+ 191 0070 2D91      	.LM14:
+ 192 0072 FA01      		movw r30,r24
+ 193 0074 2193      		ldd r18,Z+2
+  32:hdlc.c        **** 		rxMsg.command = rxCommand[1];
+ 194               	hi8(rxMsg+1)
+ 195               		ldi r24,lo8(rxCommand)
+ 196 0076 2C91      		ldi r25,hi8(rxCommand)
+ 197 0078 2083      		movw r26,r24
+  33:hdlc.c        **** 		rxMsg.size = rxCommand[2];
+ 198               	.LM11-.LFBB2
+ 199               	.LM11:
+ 200 007a FC01      		lds r24,pos
+ 201 007c 2281      		tst r24
+ 202 007e FA01      		breq .L7
+ 203 0080 2283      		lds r24,msgComplete
+  34:hdlc.c        **** 		rxMsg.data_ptr = &rxCommand[3]; // set pointer to rx buffer
+ 204               	24,lo8(1)
+ 205               		brne .L7
+ 207 0084 9483      	.LM12:
+ 208 0086 8383      		ldi r20,lo8(rxMsg+1)
+  35:hdlc.c        **** 		rxMsg.chksum = rxMsg.size + 3;
+ 209               	r21,hi8(rxMsg+1)
+ 210               		ldi r24,lo8(rxCommand)
+ 211 0088 2D5F      		ldi r25,hi8(rxCommand)
+ 212 008a 2583      		movw r26,r24
+ 213 008c 81E0      		ld r18,X+
+ 214 008e 0895      		movw r30,r20
+ 215               		st Z+,r18
+  36:hdlc.c        **** 		
+  37:hdlc.c        **** 		return 1;
+ 216               	24
+ 217               		breq .L7
+ 218 0090 80E0      		lds r24,msgComplete
+  38:hdlc.c        **** 	}
+  39:hdlc.c        **** 	else
+  40:hdlc.c        **** 		return 0;
+  41:hdlc.c        **** }
+ 219               	i r24,lo8(1)
+ 220               		brne .L7
+ 222               	.LM12:
+ 223               		ldi r20,lo8(rxMsg+1)
+ 224               		ldi r21,hi8(rxMsg+1)
+ 225               		ldi r24,lo8(rxCommand)
+ 226               		ldi r25,hi8(rxCommand)
+ 227               		movw r26,r24
+ 228               		ld r18,X+
+  42:hdlc.c        **** 
+  43:hdlc.c        **** unsigned char sendMsg(msgType msg)
+  44:hdlc.c        **** {
+ 229               	r20
+ 230               		st Z+,r18
+ 232 0094 EF92      	.LM13:
+ 233 0096 FF92      		ld r18,X
+ 234 0098 0F93      		st Z,r18
+ 236 009c DF93      	.LM14:
+ 237 009e CF93      		movw r30,r24
+ 238 00a0 CDB7      		ldd r18,Z+2
+ 239 00a2 DEB7      		movw r30,r20
+ 240 00a4 2D97      		std Z+2,r18
+ 242 00a8 F894      	.LM15:
+ 243 00aa DEBF      		adiw r24,3
+ 244 00ac 0FBE      		std Z+4,r25
+ 245 00ae CDBF      		std Z+3,r24
+ 247               	.LM16:
+ 248 00b0 2F83      		subi r18,lo8(-(3))
+ 249 00b2 F32F      		std Z+5,r18
+ 250 00b4 3887      		ldi r24,lo8(1)
+ 251 00b6 4987      		ret
+ 252 00b8 5A87      	.L7:
+ 254 00bc 6B87      	.LM17:
+ 255 00be 972F      		ldi r24,lo8(0)
+ 257 00c2 8D87      	.LM18:
+ 258               		ret
+ 260 00c4 652F      	.Lscope2:
+ 263 00ca 092F      	.global	sendMsg
+  45:hdlc.c        **** 	
+  46:hdlc.c        **** 	unsigned char i;
+  47:hdlc.c        **** 	unsigned char header[4];
+  48:hdlc.c        **** 	unsigned char trailer[2];
+  49:hdlc.c        **** 	
+  50:hdlc.c        **** 	header[0] = 0x7E; // Start byte
+ 264               	,37,.LM17-.LFBB2
+ 265               	.LM17:
+ 266 00cc 8EE7      		ldi r24,lo8(0)
+  51:hdlc.c        **** 	header[1] = msg.devAddr;
+ 268               	diw r24,3
+ 269               		std Z+4,r25
+ 270 00d0 FA83      		std Z+3,r24
+  52:hdlc.c        **** 	header[2] = msg.command;
+ 271               	18
+ 273 00d2 4B83      	.LM13:
+  53:hdlc.c        **** 	header[3] = msg.size;
+ 274               	 r24,lo8(1)
+ 275               		brne .L7
+ 277 00d6 7E01      	.LM12:
+ 278 00d8 0894      		ldi r20,lo8(rxMsg+1)
+ 279 00da E11C      		ldi r21,hi8(rxMsg+1)
+ 280 00dc F11C      		ldi r24,lo8(rxCommand)
+  54:hdlc.c        **** 
+  55:hdlc.c        **** 	
+  56:hdlc.c        **** 	trailer[0] = msg.chksum; 	// update below with correct value
+  57:hdlc.c        **** 	trailer[1] = 0x7D; 			// stop byte
+  58:hdlc.c        **** 	
+  59:hdlc.c        **** 	
+  60:hdlc.c        **** 	// send header
+  61:hdlc.c        **** 	for (i=0; i <= 3; i++)
+  62:hdlc.c        **** 	{
+  63:hdlc.c        **** 		/* Wait for empty transmit buffer */
+  64:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 281               	5,hi8(rxCommand)
+ 282               		movw r26,r24
+ 283 00de A8EC      		ld r18,X+
+ 284 00e0 B0E0      		movw r30,r20
+  65:hdlc.c        **** 		;
+  66:hdlc.c        **** 	
+  67:hdlc.c        **** 		/* Put data into buffer, sends the data */
+  68:hdlc.c        **** 		UDR1 = header[i];
+ 285               	4,pos
+ 286               		tst r24
+ 287 00e2 2EEC      		breq .L7
+ 288 00e4 30E0      		lds r24,msgComplete
+ 289               		cpi r24,lo8(1)
+ 290               		brne .L7
+ 292 00e8 4B5F      	.LM12:
+ 293 00ea 5F4F      		ldi r20,lo8(rxMsg+1)
+ 294               		ldi r21,hi8(rxMsg+1)
+ 295               		ldi r24,lo8(rxCommand)
+ 296               		ldi r25,hi8(rxCommand)
+ 297 00ec 8C91      		movw r26,r24
+ 298 00ee 85FF      		ld r18,X+
+ 299 00f0 00C0      		movw r30,r20
+ 300               		st Z+,r18
+ 302 00f2 F701      	.LM13:
+ 303 00f4 8191      		ld r18,X
+ 304 00f6 7F01      		st Z,r18
+ 306 00fa 8083      	.LM14:
+ 307               		movw r30,r24
+ 308               		ldd r18,Z+2
+ 309 00fc E416      		movw r30,r20
+ 310 00fe F506      		std Z+2,r18
+  69:hdlc.c        **** 	}
+  70:hdlc.c        **** 
+  71:hdlc.c        **** 	// send data
+  72:hdlc.c        **** 	for (i=0; i < msg.size; i++)
+ 312               	,r25
+ 313               		std Z+3,r24
+ 315 0104 01F4      	.LM16:
+ 316 0106 412F      		subi r18,lo8(-(3))
+ 317 0108 00C0      		std Z+5,r18
+ 318               		ldi r24,lo8(1)
+ 319 010a 572F      		ret
+ 320 010c 412F      	.L7:
+ 322 0110 302F      	.LM17:
+ 323 0112 8901      		ldi r24,lo8(0)
+  73:hdlc.c        **** 	{
+  74:hdlc.c        **** 		/* Wait for empty transmit buffer */
+  75:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 324               	68,0,34,.LM15-.LFBB2
+ 325               	.LM15:
+ 326 0114 A8EC      		adiw r24,3
+ 327 0116 B0E0      		std Z+4,r25
+  76:hdlc.c        **** 		;
+  77:hdlc.c        **** 	
+  78:hdlc.c        **** 		/* Put data into buffer, sends the data */
+  79:hdlc.c        **** 
+  80:hdlc.c        **** 		UDR1 = *(msg.data_ptr);
+ 328               	0,r20
+ 329               		st Z+,r18
+ 331 011a 30E0      	.LM13:
+ 332               		ld r18,X
+ 333               		st Z,r18
+ 335 011c 8C91      	.LM14:
+ 336 011e 85FF      		movw r30,r24
+ 337 0120 00C0      		ldd r18,Z+2
+ 338               		movw r30,r20
+ 339               		std Z+2,r18
+ 341 0124 8191      	.LM15:
+ 342 0126 8F01      		adiw r24,3
+ 343 0128 F901      		std Z+4,r25
+ 344 012a 8083      		std Z+3,r24
+  81:hdlc.c        **** 		
+  82:hdlc.c        **** 		// calc chksum, increase data pointer
+  83:hdlc.c        **** 		msg.chksum += *(msg.data_ptr++);
+ 345               	18
+ 347 012c 480F      	.LM13:
+ 348               		ld r18,X
+ 349               		st Z,r18
+ 351 0130 851B      	.LM14:
+ 352 0132 8617      		movw r30,r24
+ 353 0134 00F0      		ldd r18,Z+2
+ 354               		movw r30,r20
+ 355               		std Z+2,r18
+ 357 0136 8DE7      	.LM15:
+ 358 0138 8E83      		adiw r24,3
+  84:hdlc.c        **** 	}
+  85:hdlc.c        **** 	
+  86:hdlc.c        **** 	trailer[0] = msg.chksum;
+ 359               	18,X+
+ 360               		movw r30,r20
+ 361 013a 4D83      		st Z+,r18
+ 363 013e 6B5F      	.LM13:
+ 364 0140 7F4F      		ld r18,X
+  87:hdlc.c        **** 	
+  88:hdlc.c        **** 	// send trailer
+  89:hdlc.c        **** 	for (i=0; i < 2; i++)
+  90:hdlc.c        **** 	{
+  91:hdlc.c        **** 		/* Wait for empty transmit buffer */
+  92:hdlc.c        **** 		while ( !( UCSR1A & (1<<UDRE0)) )
+ 365               	
+ 366               		brne .L7
+ 368 0144 B0E0      	.LM12:
+  93:hdlc.c        **** 		;
+  94:hdlc.c        **** 	
+  95:hdlc.c        **** 		/* Put data into buffer, sends the data */
+  96:hdlc.c        **** 		UDR1 = trailer[i];
+ 369               	i r20,lo8(rxMsg+1)
+ 370               		ldi r21,hi8(rxMsg+1)
+ 371 0146 4EEC      		ldi r24,lo8(rxCommand)
+ 372 0148 50E0      		ldi r25,hi8(rxCommand)
+ 373               		movw r26,r24
+ 374               		ld r18,X+
+ 375 014a 9E01      		movw r30,r20
+ 376 014c 295F      		st Z+,r18
+ 378               	.LM13:
+ 379               		ld r18,X
+ 380               		st Z,r18
+ 382 0152 85FF      	.LM14:
+ 383 0154 00C0      		movw r30,r24
+ 384               		ldd r18,Z+2
+ 385               		movw r30,r20
+ 386 0156 FB01      		std Z+2,r18
+ 388 015a BF01      	.LM15:
+ 389 015c FA01      		adiw r24,3
+ 390 015e 8083      		std Z+4,r25
+ 391               		std Z+3,r24
+ 393 0160 6217      	.LM16:
+ 394 0162 7307      		subi r18,lo8(-(3))
+ 395 0164 01F4      		std Z+5,r18
+  97:hdlc.c        **** 	}
+  98:hdlc.c        **** 	
+  99:hdlc.c        **** 	// message sent
+ 100:hdlc.c        **** 
+ 101:hdlc.c        **** 	return 1;
+ 102:hdlc.c        **** }
+ 396               	3,.LM14-.LFBB2
+ 397               	.LM14:
+ 398 0166 81E0      		movw r30,r24
+ 399               		ldd r18,Z+2
+ 400 0168 2D96      		movw r30,r20
+ 401 016a 0FB6      		std Z+2,r18
+ 403 016e DEBF      	.LM15:
+ 404 0170 0FBE      		adiw r24,3
+ 405 0172 CDBF      		std Z+4,r25
+ 406 0174 CF91      		std Z+3,r24
+ 408 0178 1F91      	.LM16:
+ 409 017a 0F91      		subi r18,lo8(-(3))
+ 410 017c FF90      		std Z+5,r18
+ 411 017e EF90      		ldi r24,lo8(1)
+ 412 0180 0895      		ret
+ 413               	.L7:
+ 415               	.LM17:
+ 416               		ldi r24,lo8(0)
+ 418               	.LM18:
+ 419               		ret
+ 421               	.Lscope2:
+ 424               	.global	sendMsg
+ 426               	sendMsg:
+ 428               	.LM19:
+ 429               	.LFBB3:
+ 430               		push r14
+ 431               		push r15
+DEFINED SYMBOLS
+                            *ABS*:00000000 hdlc.c
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:2      *ABS*:0000003f __SREG__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:3      *ABS*:0000003e __SP_H__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:4      *ABS*:0000003d __SP_L__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:5      *ABS*:00000034 __CCP__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:88     .text:00000000 __vector_28
+                            *COM*:00000001 pos
+                            *COM*:00000001 msgComplete
+                            *COM*:0000000a rxCommand
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:170    .text:00000056 pollMsg
+                            *COM*:00000007 rxMsg
+C:\Users\joakim\AppData\Local\Temp/cc8V2hcP.s:228    .text:00000094 sendMsg
+                            *COM*:00000003 txData
+
+UNDEFINED SYMBOLS
+__do_clear_bss
